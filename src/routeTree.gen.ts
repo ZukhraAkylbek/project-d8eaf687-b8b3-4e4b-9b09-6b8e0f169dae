@@ -9,9 +9,17 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ProgressRouteImport } from './routes/progress'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SimulationsIndexRouteImport } from './routes/simulations.index'
+import { Route as SimulationsIdRouteImport } from './routes/simulations.$id'
+import { Route as SimulationsIdResultsRouteImport } from './routes/simulations.$id.results'
 
+const ProgressRoute = ProgressRouteImport.update({
+  id: '/progress',
+  path: '/progress',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -22,35 +30,79 @@ const SimulationsIndexRoute = SimulationsIndexRouteImport.update({
   path: '/simulations/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SimulationsIdRoute = SimulationsIdRouteImport.update({
+  id: '/simulations/$id',
+  path: '/simulations/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SimulationsIdResultsRoute = SimulationsIdResultsRouteImport.update({
+  id: '/results',
+  path: '/results',
+  getParentRoute: () => SimulationsIdRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/progress': typeof ProgressRoute
+  '/simulations/$id': typeof SimulationsIdRouteWithChildren
   '/simulations/': typeof SimulationsIndexRoute
+  '/simulations/$id/results': typeof SimulationsIdResultsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/progress': typeof ProgressRoute
+  '/simulations/$id': typeof SimulationsIdRouteWithChildren
   '/simulations': typeof SimulationsIndexRoute
+  '/simulations/$id/results': typeof SimulationsIdResultsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/progress': typeof ProgressRoute
+  '/simulations/$id': typeof SimulationsIdRouteWithChildren
   '/simulations/': typeof SimulationsIndexRoute
+  '/simulations/$id/results': typeof SimulationsIdResultsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/simulations/'
+  fullPaths:
+    | '/'
+    | '/progress'
+    | '/simulations/$id'
+    | '/simulations/'
+    | '/simulations/$id/results'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/simulations'
-  id: '__root__' | '/' | '/simulations/'
+  to:
+    | '/'
+    | '/progress'
+    | '/simulations/$id'
+    | '/simulations'
+    | '/simulations/$id/results'
+  id:
+    | '__root__'
+    | '/'
+    | '/progress'
+    | '/simulations/$id'
+    | '/simulations/'
+    | '/simulations/$id/results'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ProgressRoute: typeof ProgressRoute
+  SimulationsIdRoute: typeof SimulationsIdRouteWithChildren
   SimulationsIndexRoute: typeof SimulationsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/progress': {
+      id: '/progress'
+      path: '/progress'
+      fullPath: '/progress'
+      preLoaderRoute: typeof ProgressRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -65,11 +117,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SimulationsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/simulations/$id': {
+      id: '/simulations/$id'
+      path: '/simulations/$id'
+      fullPath: '/simulations/$id'
+      preLoaderRoute: typeof SimulationsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/simulations/$id/results': {
+      id: '/simulations/$id/results'
+      path: '/results'
+      fullPath: '/simulations/$id/results'
+      preLoaderRoute: typeof SimulationsIdResultsRouteImport
+      parentRoute: typeof SimulationsIdRoute
+    }
   }
 }
 
+interface SimulationsIdRouteChildren {
+  SimulationsIdResultsRoute: typeof SimulationsIdResultsRoute
+}
+
+const SimulationsIdRouteChildren: SimulationsIdRouteChildren = {
+  SimulationsIdResultsRoute: SimulationsIdResultsRoute,
+}
+
+const SimulationsIdRouteWithChildren = SimulationsIdRoute._addFileChildren(
+  SimulationsIdRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ProgressRoute: ProgressRoute,
+  SimulationsIdRoute: SimulationsIdRouteWithChildren,
   SimulationsIndexRoute: SimulationsIndexRoute,
 }
 export const routeTree = rootRouteImport
