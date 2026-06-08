@@ -79,6 +79,15 @@ function resourceDetail(resource: string, scenario: Scenario, step: number) {
   return `${resource}: рабочий артефакт для сценария «${scenario.scenario}». Используй его, чтобы уточнить гипотезу, риски и следующий шаг.`;
 }
 
+function ResourceIcon({ resource }: { resource: string }) {
+  const r = resource.toLowerCase();
+  if (r.includes("dashboard") || r.includes("аналит")) return <BarChart3 className="size-4 text-primary" />;
+  if (r.includes("feedback") || r.includes("interview") || r.includes("интерв")) return <MessageSquare className="size-4 text-primary" />;
+  if (r.includes("error") || r.includes("risk") || r.includes("лог") || r.includes("риск")) return <AlertTriangle className="size-4 text-warning" />;
+  if (r.includes("capacity") || r.includes("ёмкость") || r.includes("стоим")) return <ClipboardList className="size-4 text-primary" />;
+  return <FileText className="size-4 text-primary" />;
+}
+
 function SimulationRunner() {
   const { scenarioId } = Route.useLoaderData();
   const { getScenario } = useI18n();
@@ -190,6 +199,7 @@ function InfoLine({ label, value }: { label: string; value: string }) {
 function Running({ scenario, onComplete }: { scenario: Scenario; onComplete: () => void }) {
   const { t, tRole, lang } = useI18n();
   const react = useServerFn(reactToDecision);
+  const buildReport = useServerFn(generateReport);
   const navigate = useNavigate();
 
   const [step, setStep] = useState(1);
@@ -247,7 +257,7 @@ function Running({ scenario, onComplete }: { scenario: Scenario; onComplete: () 
 
       if (step >= scenario.totalSteps) {
         // build & store report
-        const report = await generateReport({
+        const report = await buildReport({
           data: {
             scenarioId: scenario.id,
             history: [...history, { step, decision: text, reaction: res.reaction }],
@@ -423,10 +433,7 @@ function Running({ scenario, onComplete }: { scenario: Scenario; onComplete: () 
                         : "hover:border-primary/50 hover:bg-secondary/50",
                     )}
                   >
-                    {r.toLowerCase().includes("dashboard") ? <BarChart3 className="size-4 text-primary" /> :
-                     r.toLowerCase().includes("feedback") || r.toLowerCase().includes("interview") ? <MessageSquare className="size-4 text-primary" /> :
-                     r.toLowerCase().includes("error") || r.toLowerCase().includes("risk") ? <AlertTriangle className="size-4 text-warning" /> :
-                     <FileText className="size-4 text-primary" />}
+                    <ResourceIcon resource={r} />
                     {r}
                   </button>
                 ))}
