@@ -228,10 +228,11 @@ export const generateReport = createServerFn({ method: "POST" })
         ? "IMPORTANT: Write ALL text fields (verdict, strengths, improvements, summary, recommendations) ENTIRELY in Russian."
         : "Write all text in English.";
 
-    const { output } = await generateText({
-      model: getModel(),
-      output: Output.object({ schema: ReportSchema }),
-      prompt: `Evaluate this ${scenario.role}'s performance in the simulation "${scenario.title}".
+    try {
+      const { output } = await generateText({
+        model: getModel(),
+        output: Output.object({ schema: ReportSchema }),
+        prompt: `Evaluate this ${scenario.role}'s performance in the simulation "${scenario.title}".
 
 CONTEXT:
 ${buildContext(scenario)}
@@ -242,7 +243,11 @@ ${historyText}
 Score 0-100 across 6 PM/PgM skills. Be honest but constructive. Provide concrete strengths, areas to improve, and specific recommendations.
 
 ${langInstruction}`,
-    });
+      });
 
-    return output;
+      return output;
+    } catch (error) {
+      console.error("generateReport fallback", error);
+      return fallbackReport(scenario, data);
+    }
   });
