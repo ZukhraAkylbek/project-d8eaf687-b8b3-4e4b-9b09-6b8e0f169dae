@@ -17,6 +17,7 @@ const DecisionInput = z.object({
   step: z.number(),
   totalSteps: z.number(),
   decision: z.string().min(1).max(2000),
+  currentSuggestedActions: z.array(z.string().min(1).max(160)).max(8).optional(),
   history: z
     .array(z.object({ step: z.number(), decision: z.string(), reaction: z.string() }))
     .max(30),
@@ -48,6 +49,66 @@ const ReactionSchema = z.object({
     .describe("Each from 0-100 reflecting current state after this decision."),
   suggestedActions: z.array(z.string()).max(4),
 });
+
+type ReactionOutput = z.infer<typeof ReactionSchema>;
+type ReportOutput = z.infer<typeof ReportSchema>;
+
+function clampScore(value: number) {
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+function decisionScore(decision: string) {
+  const text = decision.toLowerCase();
+  const strong = /(анализ|данн|интерв|клиент|провер|оцен|сегмент|план|proposal|teardown|customer|interview|data|analy|estimate|review|segment|draft|plan)/i.test(text);
+  const risky = /(откат|rollback|эскал|уведом|kill|sunset|cut|сократ|закрыть)/i.test(text);
+  return strong ? 12 : risky ? 4 : 8;
+}
+
+function fallbackReaction(scenario: Scenario, data: z.infer<typeof DecisionInput>): ReactionOutput {
+  const isRu = data.language === "ru";
+  const score = decisionScore(data.decision);
+  const actions = data.currentSuggestedActions?.length ? data.currentSuggestedActions : scenario.suggestedActions;
+  const rotatedActions = actions.length
+    ? actions.map((_, i) => actions[(i + data.step) % actions.length]).slice(0, 4)
+    : [isRu ? "Собрать данные" : "Gather data", isRu ? "Согласовать план" : "Align on a plan"];
+  const stakeholder = scenario.messages[data.step % Math.max(1, scenario.messages.length)] ?? scenario.messages[0];
+  const base = 48 + data.step * 4 + score;
+
+  return {
+    reaction: isRu
+      ? `Ты выбрал(а): «${data.decision}». Команда получает более понятный следующий шаг, но стейкхолдеры всё ещё ждут доказательств и конкретного плана.`
+      : `You chose: “${data.decision}”. The team gets a clearer next step, but stakeholders still expect evidence and a concrete plan.`,
+    newUpdate: isRu
+      ? `10:${String(35 + data.step).padStart(2, "0")} — появились новые вводные по сценарию «${scenario.scenario}».`
+      : `10:${String(35 + data.step).padStart(2, "0")} — new context arrived for “${scenario.scenario}”.`,
+    newMessage: {
+      from: stakeholder?.from ?? (isRu ? "Стейкхолдер" : "Stakeholder"),
+      role: stakeholder?.role ?? (isRu ? "Команда" : "Team"),
+      text: isRu
+        ? `Ок, это помогает. Теперь важно связать решение с метриками и рисками: ${scenario.companyGoal}`
+        : `Okay, this helps. Now connect the decision to metrics and risks: ${scenario.companyGoal}`,
+    },
+    metricChanges: scenario.metrics.slice(0, 4).map((metric, index) => ({
+      label: metric.label,
+      value: metric.value,
+      delta: isRu
+        ? index === 0
+          ? "+2 п.п. после решения"
+          : "умеренное улучшение"
+        : index === 0
+          ? "+2 pts after decision"
+          : "moderate improvement",
+    })),
+    hiddenScores: {
+      productSuccess: clampScore(base + 5),
+      teamMorale: clampScore(base - 2),
+      budgetHealth: clampScore(base - 6),
+      deliverySpeed: clampScore(base),
+      userImpact: clampScore(base + 3),
+    },
+    suggestedActions: rotatedActions,
+  };
+}
 
 function buildContext(s: Scenario) {
   return `You are the simulation engine for a Product/Project Manager workplace simulator. Be realistic, never preachy or tutor-like. Information may be ambiguous. React like a real company would.
