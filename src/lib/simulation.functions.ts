@@ -136,10 +136,11 @@ export const reactToDecision = createServerFn({ method: "POST" })
         ? "IMPORTANT: Respond ENTIRELY in Russian. All fields (reaction, newUpdate, newMessage.text, newMessage.from, newMessage.role, metric labels/values/deltas, suggestedActions) must be in Russian."
         : "Respond entirely in English.";
 
-    const { output } = await generateText({
-      model: getModel(),
-      output: Output.object({ schema: ReactionSchema }),
-      prompt: `${buildContext(scenario)}
+    try {
+      const { output } = await generateText({
+        model: getModel(),
+        output: Output.object({ schema: ReactionSchema }),
+        prompt: `${buildContext(scenario)}
 
 DECISION HISTORY:
 ${historyText || "(none yet)"}
@@ -149,9 +150,13 @@ USER DECISION at step ${data.step}/${data.totalSteps}: "${data.decision}"
 Generate the realistic next state. Stakeholder reactions can be supportive, frustrated, demanding, or unclear. Metrics should change plausibly based on the action. Hidden scores 0-100 reflect overall trajectory.
 
 ${langInstruction}`,
-    });
+      });
 
-    return output;
+      return output;
+    } catch (error) {
+      console.error("reactToDecision fallback", error);
+      return fallbackReaction(scenario, data);
+    }
   });
 
 const ReportInput = z.object({
