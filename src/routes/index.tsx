@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { ScenarioCard } from "@/components/ScenarioCard";
-import { SCENARIOS } from "@/lib/scenarios";
+import { useI18n } from "@/lib/i18n";
 import { ArrowRight, Sparkles, Target, TrendingUp, Trophy } from "lucide-react";
 
 export const Route = createFileRoute("/")({
@@ -26,7 +26,8 @@ export const Route = createFileRoute("/")({
 });
 
 function Dashboard() {
-  const featured = SCENARIOS.slice(0, 3);
+  const { t, scenarios } = useI18n();
+  const featured = scenarios.slice(0, 3);
 
   return (
     <AppShell>
@@ -37,19 +38,18 @@ function Dashboard() {
           <div className="absolute right-10 bottom-0 size-40 rounded-full bg-white/10 blur-2xl" />
           <div className="relative max-w-2xl">
             <div className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs backdrop-blur">
-              <Sparkles className="size-3.5" /> AI-driven workplace simulations
+              <Sparkles className="size-3.5" /> {t("home.tagline")}
             </div>
             <h1 className="mt-4 text-3xl lg:text-4xl font-bold tracking-tight">
-              Train like you're on the job.
+              {t("home.h1")}
             </h1>
             <p className="mt-2 text-white/80 max-w-lg">
-              Step into real PM and Project Manager scenarios. Make decisions, react to
-              stakeholders, get evaluated on the skills that matter.
+              {t("home.sub")}
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <Button asChild size="lg" variant="secondary" className="font-semibold">
                 <Link to="/simulations">
-                  Start a Simulation <ArrowRight className="size-4" />
+                  {t("home.cta.start")} <ArrowRight className="size-4" />
                 </Link>
               </Button>
               <Button
@@ -58,7 +58,7 @@ function Dashboard() {
                 variant="outline"
                 className="bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"
               >
-                <Link to="/progress">View My Progress</Link>
+                <Link to="/progress">{t("home.cta.progress")}</Link>
               </Button>
             </div>
           </div>
@@ -66,24 +66,24 @@ function Dashboard() {
 
         {/* Stats */}
         <section className="mt-8 grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard icon={Target} label="Simulations Available" value={String(SCENARIOS.length)} hint="PM • PgM • Roleplay" />
-          <StatCard icon={Trophy} label="Best Score" value="82" hint="Good Performance" />
-          <StatCard icon={TrendingUp} label="Avg. Score" value="74" hint="+6 this week" />
-          <StatCard icon={Sparkles} label="Skills Tracked" value="6" hint="Across each session" />
+          <StatCard icon={Target} label={t("home.stats.available")} value={String(scenarios.length)} hint={t("home.stats.availableHint")} />
+          <StatCard icon={Trophy} label={t("home.stats.best")} value="82" hint={t("home.stats.bestHint")} />
+          <StatCard icon={TrendingUp} label={t("home.stats.avg")} value="74" hint={t("home.stats.avgHint")} />
+          <StatCard icon={Sparkles} label={t("home.stats.skills")} value="6" hint={t("home.stats.skillsHint")} />
         </section>
 
         {/* Featured */}
         <section className="mt-10">
           <div className="flex items-end justify-between mb-4">
             <div>
-              <h2 className="text-xl font-semibold">Featured Simulations</h2>
+              <h2 className="text-xl font-semibold">{t("home.featured")}</h2>
               <p className="text-sm text-muted-foreground">
-                Hand-picked scenarios to sharpen your decision-making.
+                {t("home.featuredSub")}
               </p>
             </div>
             <Button asChild variant="ghost" size="sm">
               <Link to="/simulations">
-                Browse all <ArrowRight className="size-3.5" />
+                {t("home.browseAll")} <ArrowRight className="size-3.5" />
               </Link>
             </Button>
           </div>

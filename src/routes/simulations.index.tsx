@@ -2,7 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { ScenarioCard } from "@/components/ScenarioCard";
-import { SCENARIOS, type ScenarioCategory, type ScenarioLevel, type ScenarioRole } from "@/lib/scenarios";
+import { type ScenarioCategory, type ScenarioLevel, type ScenarioRole } from "@/lib/scenarios";
+import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/simulations/")({
@@ -28,34 +29,45 @@ const CATS: ("All Types" | ScenarioCategory)[] = [
 const LEVELS: ("All Levels" | ScenarioLevel)[] = ["All Levels", "Junior", "Mid-level", "Senior"];
 
 function Simulations() {
+  const { t, tCategory, tRole, tLevel, scenarios } = useI18n();
   const [role, setRole] = useState<(typeof ROLES)[number]>("All Roles");
   const [cat, setCat] = useState<(typeof CATS)[number]>("All Types");
   const [level, setLevel] = useState<(typeof LEVELS)[number]>("All Levels");
 
-  const filtered = SCENARIOS.filter(
+  const filtered = scenarios.filter(
     (s) =>
       (role === "All Roles" || s.role === role) &&
       (cat === "All Types" || s.category === cat) &&
       (level === "All Levels" || s.level === level),
   );
 
+  const labelFor = (opt: string): string => {
+    if (opt === "All Roles") return t("sim.filter.allRoles");
+    if (opt === "All Types") return t("sim.filter.allTypes");
+    if (opt === "All Levels") return t("sim.filter.allLevels");
+    if ((ROLES as readonly string[]).includes(opt)) return tRole(opt as ScenarioRole);
+    if ((CATS as readonly string[]).includes(opt)) return tCategory(opt as ScenarioCategory);
+    if ((LEVELS as readonly string[]).includes(opt)) return tLevel(opt as ScenarioLevel);
+    return opt;
+  };
+
   return (
     <AppShell>
       <div className="px-6 lg:px-10 py-8 max-w-[1400px] mx-auto">
         <header className="mb-6">
-          <h1 className="text-2xl font-bold tracking-tight">Choose Simulation</h1>
-          <p className="text-sm text-muted-foreground">Select a simulation to start practicing</p>
+          <h1 className="text-2xl font-bold tracking-tight">{t("sim.title")}</h1>
+          <p className="text-sm text-muted-foreground">{t("sim.sub")}</p>
         </header>
 
         <div className="space-y-3 mb-8">
-          <FilterRow options={ROLES} value={role} onChange={setRole} />
-          <FilterRow options={CATS} value={cat} onChange={setCat} />
-          <FilterRow options={LEVELS} value={level} onChange={setLevel} />
+          <FilterRow options={ROLES} value={role} onChange={setRole} labelFor={labelFor} />
+          <FilterRow options={CATS} value={cat} onChange={setCat} labelFor={labelFor} />
+          <FilterRow options={LEVELS} value={level} onChange={setLevel} labelFor={labelFor} />
         </div>
 
         {filtered.length === 0 ? (
           <div className="rounded-xl border border-dashed p-12 text-center text-muted-foreground">
-            No simulations match these filters.
+            {t("sim.empty")}
           </div>
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -73,10 +85,12 @@ function FilterRow<T extends string>({
   options,
   value,
   onChange,
+  labelFor,
 }: {
   options: readonly T[];
   value: T;
   onChange: (v: T) => void;
+  labelFor: (v: string) => string;
 }) {
   return (
     <div className="flex flex-wrap gap-2">
@@ -91,7 +105,7 @@ function FilterRow<T extends string>({
               : "bg-card text-foreground border-border hover:border-primary/40 hover:text-primary",
           )}
         >
-          {opt}
+          {labelFor(opt)}
         </button>
       ))}
     </div>
