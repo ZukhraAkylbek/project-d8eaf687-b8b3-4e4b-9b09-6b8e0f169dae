@@ -291,6 +291,11 @@ const RU: Dict = {
   "office.day.Thu": "Чт",
   "office.day.Fri": "Пт",
   "office.week": "Неделя {n}",
+  "office.decisionCenter": "Центр решений",
+  "office.inbox": "Входящие",
+  "office.msgs": "сообщ.",
+  "office.noMessages": "Сообщений пока нет.",
+  "run.history": "Журнал действий",
 };
 
 const DICTS: Record<Lang, Dict> = { ru: RU, en: EN };
