@@ -132,6 +132,26 @@ const EN: Dict = {
   "level.Junior": "Junior",
   "level.Mid-level": "Mid-level",
   "level.Senior": "Senior",
+  // office mode
+  "view.classic": "Classic",
+  "view.office": "Office",
+  "office.whiteboard": "Whiteboard",
+  "office.scenario": "Scenario",
+  "office.goal": "Company Goal",
+  "office.metrics": "Key Metrics",
+  "office.events": "Latest Events",
+  "office.computer": "Computer",
+  "office.docs": "Documents",
+  "office.phone": "Phone",
+  "office.openComputer": "Open laptop",
+  "office.openDocs": "Open documents",
+  "office.openPhone": "Pick up phone",
+  "office.day.Mon": "Mon",
+  "office.day.Tue": "Tue",
+  "office.day.Wed": "Wed",
+  "office.day.Thu": "Thu",
+  "office.day.Fri": "Fri",
+  "office.week": "Week {n}",
 };
 
 const RU: Dict = {
