@@ -214,6 +214,38 @@ function Running({ scenario, onComplete }: { scenario: Scenario; onComplete: () 
   const [suggested, setSuggested] = useState(scenario.suggestedActions);
   const [lastReaction, setLastReaction] = useState<string | null>(null);
   const [selectedResource, setSelectedResource] = useState(scenario.resources[0] ?? "");
+  const [viewMode, setViewMode] = useState<"office" | "classic">(() => {
+    if (typeof window === "undefined") return "office";
+    return (localStorage.getItem("pp:viewMode") as "office" | "classic") || "office";
+  });
+  useEffect(() => {
+    try { localStorage.setItem("pp:viewMode", viewMode); } catch {}
+  }, [viewMode]);
+
+  const viewToggle = (
+    <div className="inline-flex rounded-md border bg-card/90 p-0.5 text-xs font-medium">
+      <button
+        type="button"
+        onClick={() => setViewMode("classic")}
+        className={cn(
+          "px-2.5 py-1 rounded",
+          viewMode === "classic" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
+        )}
+      >
+        {t("view.classic")}
+      </button>
+      <button
+        type="button"
+        onClick={() => setViewMode("office")}
+        className={cn(
+          "px-2.5 py-1 rounded",
+          viewMode === "office" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
+        )}
+      >
+        {t("view.office")}
+      </button>
+    </div>
+  );
 
   async function submit(text: string) {
     if (!text.trim() || pending) return;
