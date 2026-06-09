@@ -266,6 +266,26 @@ const RU: Dict = {
   "level.Junior": "Junior",
   "level.Mid-level": "Middle",
   "level.Senior": "Senior",
+  // office mode
+  "view.classic": "Классика",
+  "view.office": "Офис",
+  "office.whiteboard": "Доска",
+  "office.scenario": "Сценарий",
+  "office.goal": "Цель компании",
+  "office.metrics": "Ключевые метрики",
+  "office.events": "Последние события",
+  "office.computer": "Компьютер",
+  "office.docs": "Документы",
+  "office.phone": "Телефон",
+  "office.openComputer": "Открыть ноутбук",
+  "office.openDocs": "Открыть документы",
+  "office.openPhone": "Взять телефон",
+  "office.day.Mon": "Пн",
+  "office.day.Tue": "Вт",
+  "office.day.Wed": "Ср",
+  "office.day.Thu": "Чт",
+  "office.day.Fri": "Пт",
+  "office.week": "Неделя {n}",
 };
 
 const DICTS: Record<Lang, Dict> = { ru: RU, en: EN };
