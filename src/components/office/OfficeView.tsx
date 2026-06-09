@@ -203,7 +203,7 @@ export function OfficeView(props: OfficeViewProps) {
 
           {/* Phone (right, on desk) */}
           <DeskPhotoObject
-            style={{ right: "11%", bottom: "12%", width: "8.5%" }}
+            style={{ right: "10%", bottom: "10%", width: "11%" }}
             src={phoneImg}
             label={t("office.phone")}
             ariaLabel={t("office.openPhone")}
@@ -324,7 +324,7 @@ function ObjectModal({
       <div
         className={cn(
           "relative w-full",
-          wide ? "max-w-4xl" : "max-w-md",
+          anim === "phone" ? "max-w-[350px]" : wide ? "max-w-4xl" : "max-w-md",
           animClass,
         )}
       >
@@ -342,7 +342,7 @@ function ObjectModal({
               <X className="size-4" />
             </button>
           </div>
-          <div className="max-h-[88vh] overflow-y-auto">{children}</div>
+          <div className={cn(anim === "phone" ? "overflow-hidden" : "max-h-[88vh] overflow-y-auto")}>{children}</div>
         </div>
       </div>
     </div>
@@ -846,17 +846,17 @@ function PhonePanel({
   const timeStr = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 
   return (
-    <div className="flex justify-center p-3 bg-[oklch(0.15_0.02_265)]">
+    <div className="flex justify-center p-2 bg-[oklch(0.15_0.02_265)]">
       <div
-        className="relative w-full max-w-[320px] rounded-[40px] p-2.5"
+        className="relative w-full max-w-[290px] rounded-[36px] p-2"
         style={{
           background: "linear-gradient(180deg, oklch(0.22 0.02 265), oklch(0.14 0.02 265))",
           border: "1px solid oklch(0.3 0.02 265)",
           boxShadow: "0 30px 60px -10px rgba(0,0,0,0.6)",
         }}
       >
-        <div className="absolute left-1/2 -translate-x-1/2 top-3.5 h-5 w-28 rounded-full bg-black/80 z-10" />
-        <div className="rounded-[32px] overflow-hidden bg-background h-[min(78vh,640px)] flex flex-col">
+        <div className="absolute left-1/2 -translate-x-1/2 top-3 h-4 w-24 rounded-full bg-black/80 z-10" />
+        <div className="rounded-[30px] overflow-hidden bg-background h-[min(70vh,570px)] flex flex-col">
           <div className="flex items-center justify-between px-6 pt-3 pb-2 text-[11px] font-semibold">
             <span>{timeStr}</span>
             <div className="flex items-center gap-1 text-foreground/70">
