@@ -1104,3 +1104,25 @@ function OfficeClock({ step, totalSteps }: { step: number; totalSteps: number })
     </div>
   );
 }
+
+function clamp(n: number, min = 0, max = 100) {
+  return Math.max(min, Math.min(max, Math.round(n)));
+}
+
+function PerfBar({ label, value }: { label: string; value: number }) {
+  const tone =
+    value >= 75 ? "bg-emerald-400" : value >= 55 ? "bg-amber-400" : value >= 35 ? "bg-orange-400" : "bg-rose-400";
+  const text =
+    value >= 75 ? "text-emerald-300" : value >= 55 ? "text-amber-300" : value >= 35 ? "text-orange-300" : "text-rose-300";
+  return (
+    <div>
+      <div className="flex items-baseline justify-between text-[11px] mb-1">
+        <span className="text-white/70 truncate">{label}</span>
+        <span className={`font-mono tabular-nums font-semibold ${text}`}>{value}</span>
+      </div>
+      <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
+        <div className={`h-full ${tone} transition-all duration-500`} style={{ width: `${value}%` }} />
+      </div>
+    </div>
+  );
+}
