@@ -113,47 +113,67 @@ export function OfficeView(props: OfficeViewProps) {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  const progressPct = Math.round((step / Math.max(1, totalSteps)) * 100);
+  const score = Math.min(100, 40 + step * 6 + props.history.length * 2);
+  // Synthetic performance indexes derived from step progress (presentation only)
+  const indexes: { key: string; label: string; value: number }[] = [
+    { key: "pt", label: scenario.role === "Project Manager" ? "Project Thinking" : "Product Thinking", value: clamp(45 + step * 5) },
+    { key: "da", label: "Data Analysis", value: clamp(40 + step * 6 - 2) },
+    { key: "sm", label: "Stakeholder Mgmt", value: clamp(50 + step * 4) },
+    { key: "dm", label: "Decision Making", value: clamp(42 + step * 5 + props.history.length) },
+    { key: "ex", label: "Execution", value: clamp(38 + step * 6) },
+    { key: "co", label: "Communication", value: clamp(55 + step * 3) },
+  ];
+
   return (
-    <div className="relative min-h-[calc(100vh-4rem)] overflow-hidden">
-      {/* Photoreal office backdrop */}
-      <div
-        className="absolute inset-0 -z-10 bg-cover bg-center"
-        style={{ backgroundImage: `url(${officeBg})` }}
-        aria-hidden
-      />
-      {/* warm vignette for depth */}
+    <div className="relative min-h-[calc(100vh-4rem)] overflow-hidden bg-[oklch(0.16_0.025_265)] text-white">
+      {/* Dark textured office wall */}
       <div
         className="absolute inset-0 -z-10 pointer-events-none"
         style={{
           background:
-            "radial-gradient(ellipse at 50% 90%, transparent 30%, rgba(0,0,0,0.45) 90%)",
+            "radial-gradient(ellipse at 65% -10%, oklch(0.28 0.04 260 / 0.9), transparent 55%), radial-gradient(ellipse at 10% 110%, oklch(0.1 0.02 260 / 0.9), transparent 60%), linear-gradient(180deg, oklch(0.20 0.03 265), oklch(0.12 0.02 265))",
+        }}
+        aria-hidden
+      />
+      <div
+        className="absolute inset-0 -z-10 pointer-events-none opacity-[0.07] mix-blend-overlay"
+        style={{
+          backgroundImage:
+            "repeating-linear-gradient(0deg, rgba(255,255,255,0.6) 0 1px, transparent 1px 3px), repeating-linear-gradient(90deg, rgba(255,255,255,0.4) 0 1px, transparent 1px 3px)",
         }}
         aria-hidden
       />
 
-      {/* Top translucent bar */}
-      <div className="relative z-10 px-4 md:px-8 lg:px-12 py-4">
-        <div className="flex flex-wrap items-center gap-3 justify-between rounded-2xl bg-black/35 backdrop-blur-md text-white px-4 py-2.5 border border-white/10 shadow-xl">
-          <Link
-            to="/simulations"
-            className="inline-flex items-center text-sm text-white/80 hover:text-white gap-1"
-          >
-            <ArrowLeft className="size-4" /> {t("card.backToSims")}
-          </Link>
-          <div className="text-sm font-medium">
-            {tRole(scenario.role)} {t("run.simulationSuffix")} ·{" "}
-            <span className="text-white/60">
-              {t("run.stepOf", { n: step, total: totalSteps })}
-            </span>
+      {/* Top header */}
+      <div className="relative z-10 px-4 md:px-6 lg:px-8 py-3">
+        <div className="flex flex-wrap items-center gap-3 justify-between rounded-xl bg-black/40 backdrop-blur-md text-white px-4 py-2 border border-white/10 shadow-xl">
+          <div className="flex items-center gap-3 min-w-0">
+            <Link to="/simulations" className="inline-flex items-center text-xs text-white/70 hover:text-white gap-1 shrink-0">
+              <ArrowLeft className="size-3.5" />
+            </Link>
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="size-7 rounded-md bg-gradient-primary grid place-items-center shrink-0 shadow-glow">
+                <Sparkles className="size-3.5 text-white" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-[11px] uppercase tracking-[0.18em] text-white/50 leading-none">ProductPush</div>
+                <div className="text-sm font-semibold truncate">{scenario.title}</div>
+              </div>
+            </div>
+          </div>
+          <div className="hidden md:flex items-center gap-2 text-[11px] font-mono text-white/60">
+            <span className="px-2 py-1 rounded-md bg-white/5 border border-white/10">Week {Math.ceil(step / 2)}</span>
+            <span className="px-2 py-1 rounded-md bg-white/5 border border-white/10">Day {step} / {totalSteps}</span>
+            <OfficeClock step={step} totalSteps={totalSteps} />
           </div>
           <div className="flex items-center gap-2">
             {props.viewToggle}
-            <OfficeClock step={step} totalSteps={totalSteps} />
             <Button
               variant="outline"
               size="sm"
               onClick={() => navigate({ to: "/simulations" })}
-              className="bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"
+              className="bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white h-8"
             >
               {t("run.end")}
             </Button>
@@ -161,81 +181,204 @@ export function OfficeView(props: OfficeViewProps) {
         </div>
       </div>
 
-      {/* Stage: positioned overlays on the photoreal scene */}
-      <div className="relative w-full" style={{ aspectRatio: "16 / 9", minHeight: 540 }}>
-        {/* Whiteboard handwritten overlay — anchored on the whiteboard area of the bg */}
-        <button
-          type="button"
-          onClick={() => setOpen("whiteboard")}
-          className="absolute group cursor-pointer text-left"
-          style={{ left: "28%", top: "9%", width: "46%", height: "50%" }}
-          aria-label={t("office.whiteboard")}
-        >
-          <WhiteboardWriting scenario={scenario} metrics={props.metrics} step={step} />
-          <span className="absolute inset-0 rounded-md ring-0 group-hover:ring-2 ring-amber-300/50 transition" />
-        </button>
-
-        {/* Desk objects row — bottom wooden desk surface */}
-        <div className="absolute inset-x-0 bottom-0 h-[44%] pointer-events-none">
-          {/* Docs (left, on desk) */}
-          <DeskPhotoObject
-            style={{ left: "10%", bottom: "10%", width: "17%" }}
-            src={docsImg}
-            label={t("office.docs")}
-            ariaLabel={t("office.openDocs")}
-            onClick={() => setOpen("docs")}
-            badge={unreadDocs > 0 ? String(unreadDocs) : undefined}
-            pulseBadge={paperPulse || unreadDocs > 0}
-            tiltDeg={-4}
-            count={visibleResourceCount}
-          />
-
-          {/* Laptop (center, front-facing) */}
-          <DeskPhotoObject
-            style={{ left: "33%", bottom: "4%", width: "34%" }}
-            src={laptopImg}
-            label={t("office.computer")}
-            ariaLabel={t("office.openComputer")}
-            onClick={() => setOpen("computer")}
-            tiltDeg={0}
-            glow
-          />
-
-          {/* Phone (right, on desk) */}
-          <DeskPhotoObject
-            style={{ right: "10%", bottom: "10%", width: "11%" }}
-            src={phoneImg}
-            label={t("office.phone")}
-            ariaLabel={t("office.openPhone")}
-            onClick={() => setOpen("phone")}
-            badge={unreadMessages > 0 ? String(unreadMessages) : undefined}
-            pulseBadge={unreadMessages > 0}
-            ringing={phoneRing}
-            tiltDeg={2}
-          />
-        </div>
-      </div>
-
-      {/* Bottom timeline strip */}
-      <div className="relative z-10 px-4 md:px-8 lg:px-12 pb-6 -mt-4">
-        <div className="rounded-2xl bg-black/35 backdrop-blur-md border border-white/10 text-white px-4 py-3 shadow-xl">
-          <div className="text-[10px] font-semibold uppercase tracking-wider text-white/60 mb-1.5">
-            {t("run.timeline")}
-          </div>
-          <div className="flex flex-wrap items-center gap-1.5">
-            {Array.from({ length: totalSteps }, (_, i) => i + 1).map((n) => (
+      {/* Main grid: sidebar + stage */}
+      <div className="relative z-10 px-3 md:px-6 lg:px-8 pb-6 grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
+        {/* LEFT KPI SIDEBAR */}
+        <aside className="rounded-2xl bg-black/45 backdrop-blur-xl border border-white/10 shadow-2xl p-4 space-y-5 self-start sticky top-3 max-h-[calc(100vh-2rem)] overflow-y-auto">
+          {/* Progress block */}
+          <section>
+            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/50 mb-2">Simulation Progress</div>
+            <div className="flex items-baseline justify-between mb-1.5">
+              <span className="text-2xl font-bold tabular-nums">{progressPct}%</span>
+              <span className="text-[11px] font-mono text-white/60">Day {step}/{totalSteps}</span>
+            </div>
+            <div className="h-2 w-full rounded-full bg-white/10 overflow-hidden">
               <div
-                key={n}
-                className={cn(
-                  "size-6 rounded-full grid place-items-center text-[11px] font-semibold border transition-all",
-                  n < step && "bg-primary text-primary-foreground border-primary",
-                  n === step && "bg-primary/25 text-white border-primary ring-2 ring-primary/50",
-                  n > step && "bg-white/5 text-white/50 border-white/20",
-                )}
+                className="h-full bg-gradient-primary transition-all duration-500"
+                style={{ width: `${progressPct}%` }}
+              />
+            </div>
+            <div className="mt-3 flex items-center justify-between rounded-lg bg-white/5 border border-white/10 px-3 py-2">
+              <span className="text-[11px] uppercase tracking-wider text-white/60">Score</span>
+              <span className="text-base font-bold text-amber-300 tabular-nums">{score}</span>
+            </div>
+          </section>
+
+          {/* Performance Indexes */}
+          <section>
+            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/50 mb-2">Performance Indexes</div>
+            <div className="space-y-2.5">
+              {indexes.map((ix) => (
+                <PerfBar key={ix.key} label={ix.label} value={ix.value} />
+              ))}
+            </div>
+          </section>
+
+          {/* Objectives */}
+          <section>
+            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/50 mb-2">Objectives</div>
+            <ul className="space-y-1.5">
+              {scenario.objectives.map((obj, i) => {
+                const done = i < step - 1;
+                const active = i === step - 1;
+                return (
+                  <li
+                    key={obj}
+                    className={cn(
+                      "flex items-start gap-2 rounded-md px-2 py-1.5 text-[12px] leading-snug border transition-colors",
+                      done && "bg-emerald-500/10 border-emerald-500/30 text-white/70 line-through",
+                      active && "bg-primary/15 border-primary/40 text-white",
+                      !done && !active && "border-white/5 text-white/50",
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "mt-0.5 size-4 shrink-0 rounded-full grid place-items-center text-[10px] font-bold",
+                        done ? "bg-emerald-500 text-white" : active ? "bg-primary text-white" : "bg-white/10 text-white/40",
+                      )}
+                    >
+                      {done ? "✓" : i + 1}
+                    </span>
+                    <span className="flex-1">{obj}</span>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        </aside>
+
+        {/* STAGE */}
+        <div className="relative">
+          {/* Stage frame */}
+          <div className="relative w-full rounded-2xl overflow-hidden border border-white/10 shadow-2xl" style={{ aspectRatio: "16 / 10", minHeight: 520 }}>
+            {/* Back wall */}
+            <div
+              className="absolute inset-0"
+              style={{
+                background:
+                  "linear-gradient(180deg, oklch(0.26 0.03 260) 0%, oklch(0.20 0.03 260) 56%, oklch(0.16 0.02 260) 56%, oklch(0.12 0.02 260) 100%)",
+              }}
+            />
+            {/* Wall ambient light */}
+            <div
+              className="absolute inset-x-0 top-0 h-[56%] pointer-events-none"
+              style={{ background: "radial-gradient(ellipse at 50% 0%, oklch(0.85 0.08 80 / 0.18), transparent 60%)" }}
+            />
+            {/* Subtle wall grid */}
+            <div
+              className="absolute inset-x-0 top-0 h-[56%] opacity-[0.05] pointer-events-none"
+              style={{
+                backgroundImage:
+                  "repeating-linear-gradient(90deg, rgba(255,255,255,0.4) 0 1px, transparent 1px 80px)",
+              }}
+            />
+
+            {/* Desk surface (wooden) */}
+            <div className="absolute inset-x-0 bottom-0 h-[44%] pointer-events-none">
+              {/* edge line / horizon */}
+              <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-black/60 to-transparent" />
+              <div
+                className="absolute inset-0"
+                style={{
+                  background:
+                    "linear-gradient(180deg, oklch(0.38 0.05 55) 0%, oklch(0.30 0.05 50) 35%, oklch(0.22 0.04 45) 100%)",
+                }}
+              />
+              {/* wood grain */}
+              <div
+                className="absolute inset-0 opacity-30 mix-blend-overlay"
+                style={{
+                  backgroundImage:
+                    "repeating-linear-gradient(90deg, rgba(0,0,0,0.25) 0 2px, transparent 2px 7px), repeating-linear-gradient(90deg, rgba(255,255,255,0.06) 0 1px, transparent 1px 24px)",
+                }}
+              />
+              {/* desk top highlight */}
+              <div className="absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-white/15 to-transparent" />
+            </div>
+
+            {/* Whiteboard with metallic frame */}
+            <button
+              type="button"
+              onClick={() => setOpen("whiteboard")}
+              className="absolute group cursor-pointer text-left"
+              style={{ left: "18%", top: "5%", width: "64%", height: "46%" }}
+              aria-label={t("office.whiteboard")}
+            >
+              <div
+                className="relative w-full h-full rounded-md p-[10px] shadow-[0_25px_45px_-15px_rgba(0,0,0,0.7)]"
+                style={{
+                  background:
+                    "linear-gradient(145deg, oklch(0.72 0.02 80), oklch(0.45 0.03 70) 50%, oklch(0.6 0.03 75))",
+                }}
               >
-                {n}
+                <div className="relative w-full h-full rounded-sm bg-[oklch(0.98_0.005_90)] overflow-hidden">
+                  <WhiteboardWriting scenario={scenario} metrics={props.metrics} step={step} />
+                  <span className="absolute inset-0 ring-0 group-hover:ring-2 ring-amber-300/60 transition rounded-sm" />
+                </div>
+                {/* board tray */}
+                <div
+                  className="absolute left-[6%] right-[6%] -bottom-1 h-1.5 rounded-b"
+                  style={{ background: "linear-gradient(180deg, oklch(0.45 0.03 70), oklch(0.25 0.02 65))" }}
+                />
               </div>
-            ))}
+            </button>
+
+            {/* Desk objects */}
+            <div className="absolute inset-x-0 bottom-0 h-[44%] pointer-events-none">
+              <DeskPhotoObject
+                style={{ left: "6%", bottom: "8%", width: "17%" }}
+                src={docsImg}
+                label={t("office.docs")}
+                ariaLabel={t("office.openDocs")}
+                onClick={() => setOpen("docs")}
+                badge={unreadDocs > 0 ? String(unreadDocs) : undefined}
+                pulseBadge={paperPulse || unreadDocs > 0}
+                tiltDeg={-4}
+                count={visibleResourceCount}
+              />
+              <DeskPhotoObject
+                style={{ left: "32%", bottom: "2%", width: "36%" }}
+                src={laptopImg}
+                label={t("office.computer")}
+                ariaLabel={t("office.openComputer")}
+                onClick={() => setOpen("computer")}
+                tiltDeg={0}
+                glow
+              />
+              <DeskPhotoObject
+                style={{ right: "8%", bottom: "8%", width: "11%" }}
+                src={phoneImg}
+                label={t("office.phone")}
+                ariaLabel={t("office.openPhone")}
+                onClick={() => setOpen("phone")}
+                badge={unreadMessages > 0 ? String(unreadMessages) : undefined}
+                pulseBadge={unreadMessages > 0}
+                ringing={phoneRing}
+                tiltDeg={2}
+              />
+            </div>
+          </div>
+
+          {/* Timeline strip */}
+          <div className="mt-3 rounded-xl bg-black/40 backdrop-blur-md border border-white/10 text-white px-4 py-2.5 shadow-xl">
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-white/60 mb-1.5">
+              {t("run.timeline")}
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {Array.from({ length: totalSteps }, (_, i) => i + 1).map((n) => (
+                <div
+                  key={n}
+                  className={cn(
+                    "size-6 rounded-full grid place-items-center text-[11px] font-semibold border transition-all",
+                    n < step && "bg-primary text-primary-foreground border-primary",
+                    n === step && "bg-primary/25 text-white border-primary ring-2 ring-primary/50",
+                    n > step && "bg-white/5 text-white/50 border-white/20",
+                  )}
+                >
+                  {n}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
