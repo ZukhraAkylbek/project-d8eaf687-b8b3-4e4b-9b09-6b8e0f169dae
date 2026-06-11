@@ -205,8 +205,12 @@ function Running({ scenario, onComplete }: { scenario: Scenario; onComplete: () 
   const buildReport = useServerFn(generateReport);
   const navigate = useNavigate();
 
+  const isExam = !!scenario.isExam;
+  const examSeconds = (scenario.examDurationMin ?? 60) * 60;
+
   const [step, setStep] = useState(1);
   const [decision, setDecision] = useState("");
+  const [externalLink, setExternalLink] = useState("");
   const [pending, setPending] = useState(false);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [metrics, setMetrics] = useState<LiveMetric[]>(scenario.metrics);
@@ -215,6 +219,7 @@ function Running({ scenario, onComplete }: { scenario: Scenario; onComplete: () 
   const [suggested, setSuggested] = useState(scenario.suggestedActions);
   const [lastReaction, setLastReaction] = useState<string | null>(null);
   const [selectedResource, setSelectedResource] = useState(scenario.resources[0] ?? "");
+  const [timeLeft, setTimeLeft] = useState<number>(examSeconds);
   const [viewMode, setViewMode] = useState<"office" | "classic">(() => {
     if (typeof window === "undefined") return "office";
     return (localStorage.getItem("pp:viewMode") as "office" | "classic") || "office";
@@ -222,6 +227,43 @@ function Running({ scenario, onComplete }: { scenario: Scenario; onComplete: () 
   useEffect(() => {
     try { localStorage.setItem("pp:viewMode", viewMode); } catch {}
   }, [viewMode]);
+
+  // Exam countdown — hard 60min (or scenario-defined), auto-finish on expiry.
+  useEffect(() => {
+    if (!isExam) return;
+    if (timeLeft <= 0) {
+      void finalizeExam("[Auto-submitted — time expired]");
+      return;
+    }
+    const id = setInterval(() => setTimeLeft((s) => Math.max(0, s - 1)), 1000);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isExam, timeLeft]);
+
+  async function finalizeExam(extra: string) {
+    try {
+      const report = await buildReport({
+        data: {
+          scenarioId: scenario.id,
+          history: history.length
+            ? history
+            : [{ step: 1, decision: extra, reaction: "Exam time expired" }],
+          language: lang,
+        },
+      });
+      try {
+        localStorage.setItem(
+          `pp:result:${scenario.id}`,
+          JSON.stringify({ report, scenarioId: scenario.id, at: Date.now() }),
+        );
+      } catch {}
+      navigate({ to: "/simulations/$id/results", params: { id: scenario.id } });
+      onComplete();
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
 
   const viewToggle = (
     <div className="inline-flex rounded-md border bg-card/90 p-0.5 text-xs font-medium">
