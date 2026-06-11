@@ -290,10 +290,24 @@ function Running({ scenario, onComplete }: { scenario: Scenario; onComplete: () 
     </div>
   );
 
-  async function submit(text: string) {
+  const fmtTime = (s: number) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+  const timerLow = isExam && timeLeft <= 5 * 60;
+  const timerChip = isExam ? (
+    <div className={cn(
+      "inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-sm font-mono tabular-nums",
+      timerLow ? "border-destructive/60 bg-destructive/10 text-destructive animate-pulse" : "border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-300",
+    )}>
+      <Timer className="size-3.5" /> EXAM {fmtTime(timeLeft)}
+    </div>
+  ) : null;
+
+  async function submit(textRaw: string) {
+    const link = externalLink.trim();
+    const text = link ? `${textRaw}\n\nAttached link: ${link}` : textRaw;
     if (!text.trim() || pending) return;
     setPending(true);
     setDecision("");
+    setExternalLink("");
     try {
       const res = await react({
         data: {
