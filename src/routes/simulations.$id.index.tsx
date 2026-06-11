@@ -417,9 +417,11 @@ function Running({ scenario, onComplete }: { scenario: Scenario; onComplete: () 
           </div>
           <div className="flex items-center gap-3">
             {viewToggle}
-            <div className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-sm font-mono">
-              <Timer className="size-3.5 text-muted-foreground" /> 24:35
-            </div>
+            {timerChip ?? (
+              <div className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-sm font-mono">
+                <Timer className="size-3.5 text-muted-foreground" /> 24:35
+              </div>
+            )}
             <Button variant="outline" size="sm" onClick={() => navigate({ to: "/simulations" })}>
               {t("run.end")}
             </Button>
