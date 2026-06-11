@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { OfficeView } from "@/components/office/OfficeView";
 
 
@@ -204,8 +205,12 @@ function Running({ scenario, onComplete }: { scenario: Scenario; onComplete: () 
   const buildReport = useServerFn(generateReport);
   const navigate = useNavigate();
 
+  const isExam = !!scenario.isExam;
+  const examSeconds = (scenario.examDurationMin ?? 60) * 60;
+
   const [step, setStep] = useState(1);
   const [decision, setDecision] = useState("");
+  const [externalLink, setExternalLink] = useState("");
   const [pending, setPending] = useState(false);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [metrics, setMetrics] = useState<LiveMetric[]>(scenario.metrics);
@@ -214,6 +219,7 @@ function Running({ scenario, onComplete }: { scenario: Scenario; onComplete: () 
   const [suggested, setSuggested] = useState(scenario.suggestedActions);
   const [lastReaction, setLastReaction] = useState<string | null>(null);
   const [selectedResource, setSelectedResource] = useState(scenario.resources[0] ?? "");
+  const [timeLeft, setTimeLeft] = useState<number>(examSeconds);
   const [viewMode, setViewMode] = useState<"office" | "classic">(() => {
     if (typeof window === "undefined") return "office";
     return (localStorage.getItem("pp:viewMode") as "office" | "classic") || "office";
@@ -221,6 +227,43 @@ function Running({ scenario, onComplete }: { scenario: Scenario; onComplete: () 
   useEffect(() => {
     try { localStorage.setItem("pp:viewMode", viewMode); } catch {}
   }, [viewMode]);
+
+  // Exam countdown — hard 60min (or scenario-defined), auto-finish on expiry.
+  useEffect(() => {
+    if (!isExam) return;
+    if (timeLeft <= 0) {
+      void finalizeExam("[Auto-submitted — time expired]");
+      return;
+    }
+    const id = setInterval(() => setTimeLeft((s) => Math.max(0, s - 1)), 1000);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isExam, timeLeft]);
+
+  async function finalizeExam(extra: string) {
+    try {
+      const report = await buildReport({
+        data: {
+          scenarioId: scenario.id,
+          history: history.length
+            ? history
+            : [{ step: 1, decision: extra, reaction: "Exam time expired" }],
+          language: lang,
+        },
+      });
+      try {
+        localStorage.setItem(
+          `pp:result:${scenario.id}`,
+          JSON.stringify({ report, scenarioId: scenario.id, at: Date.now() }),
+        );
+      } catch {}
+      navigate({ to: "/simulations/$id/results", params: { id: scenario.id } });
+      onComplete();
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
 
   const viewToggle = (
     <div className="inline-flex rounded-md border bg-card/90 p-0.5 text-xs font-medium">
@@ -247,10 +290,24 @@ function Running({ scenario, onComplete }: { scenario: Scenario; onComplete: () 
     </div>
   );
 
-  async function submit(text: string) {
+  const fmtTime = (s: number) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+  const timerLow = isExam && timeLeft <= 5 * 60;
+  const timerChip = isExam ? (
+    <div className={cn(
+      "inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-sm font-mono tabular-nums",
+      timerLow ? "border-destructive/60 bg-destructive/10 text-destructive animate-pulse" : "border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-300",
+    )}>
+      <Timer className="size-3.5" /> EXAM {fmtTime(timeLeft)}
+    </div>
+  ) : null;
+
+  async function submit(textRaw: string) {
+    const link = externalLink.trim();
+    const text = link ? `${textRaw}\n\nAttached link: ${link}` : textRaw;
     if (!text.trim() || pending) return;
     setPending(true);
     setDecision("");
+    setExternalLink("");
     try {
       const res = await react({
         data: {
@@ -338,6 +395,10 @@ function Running({ scenario, onComplete }: { scenario: Scenario; onComplete: () 
           setSelectedResource={setSelectedResource}
           submit={submit}
           viewToggle={viewToggle}
+          isExam={isExam}
+          examExternalLink={externalLink}
+          setExamExternalLink={setExternalLink}
+          timerChip={timerChip}
         />
       </AppShell>
     );
@@ -356,9 +417,11 @@ function Running({ scenario, onComplete }: { scenario: Scenario; onComplete: () 
           </div>
           <div className="flex items-center gap-3">
             {viewToggle}
-            <div className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-sm font-mono">
-              <Timer className="size-3.5 text-muted-foreground" /> 24:35
-            </div>
+            {timerChip ?? (
+              <div className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-sm font-mono">
+                <Timer className="size-3.5 text-muted-foreground" /> 24:35
+              </div>
+            )}
             <Button variant="outline" size="sm" onClick={() => navigate({ to: "/simulations" })}>
               {t("run.end")}
             </Button>
@@ -414,42 +477,68 @@ function Running({ scenario, onComplete }: { scenario: Scenario; onComplete: () 
 
             {/* Decision */}
             <div className="rounded-2xl border bg-card p-6 shadow-card">
-              <h3 className="font-semibold">{t("run.yourDecision")}</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">{t("run.yourDecisionSub")}</p>
+              <h3 className="font-semibold">
+                {isExam ? "Exam answer (free-form)" : t("run.yourDecision")}
+              </h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {isExam ? "No suggested options. Write your full answer and attach an external doc link if needed." : t("run.yourDecisionSub")}
+              </p>
 
-              <div className="mt-4 flex flex-wrap gap-2">
-                {suggested.map((a) => (
-                  <button
-                    key={a}
-                    disabled={pending}
-                    onClick={() => submit(a)}
-                    className={cn(
-                      "rounded-lg border px-3 py-2 text-sm text-left transition-all",
-                      "hover:border-primary hover:bg-primary/5 hover:text-primary",
-                      "disabled:opacity-50 disabled:cursor-not-allowed",
-                    )}
-                  >
-                    {a}
-                  </button>
-                ))}
-              </div>
+              {!isExam && (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {suggested.map((a) => (
+                    <button
+                      key={a}
+                      disabled={pending}
+                      onClick={() => submit(a)}
+                      className={cn(
+                        "rounded-lg border px-3 py-2 text-sm text-left transition-all",
+                        "hover:border-primary hover:bg-primary/5 hover:text-primary",
+                        "disabled:opacity-50 disabled:cursor-not-allowed",
+                      )}
+                    >
+                      {a}
+                    </button>
+                  ))}
+                </div>
+              )}
 
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
                   submit(decision);
                 }}
-                className="mt-4 flex gap-2"
+                className="mt-4 space-y-2"
               >
-                <Input
-                  value={decision}
-                  onChange={(e) => setDecision(e.target.value)}
-                  placeholder={t("run.placeholder")}
-                  disabled={pending}
-                />
-                <Button type="submit" disabled={pending || !decision.trim()} className="bg-gradient-primary text-primary-foreground shadow-glow">
-                  {pending ? <Loader2 className="size-4 animate-spin" /> : <><Send className="size-4" /> {t("run.submit")}</>}
-                </Button>
+                {isExam ? (
+                  <>
+                    <Textarea
+                      value={decision}
+                      onChange={(e) => setDecision(e.target.value)}
+                      placeholder="Write your full answer / decision / TZ here…"
+                      disabled={pending}
+                      className="min-h-[160px]"
+                    />
+                    <Input
+                      value={externalLink}
+                      onChange={(e) => setExternalLink(e.target.value)}
+                      placeholder="External link (Notion / Google Docs / Figma URL)"
+                      disabled={pending}
+                    />
+                  </>
+                ) : (
+                  <Input
+                    value={decision}
+                    onChange={(e) => setDecision(e.target.value)}
+                    placeholder={t("run.placeholder")}
+                    disabled={pending}
+                  />
+                )}
+                <div className="flex justify-end">
+                  <Button type="submit" disabled={pending || !decision.trim()} className="bg-gradient-primary text-primary-foreground shadow-glow">
+                    {pending ? <Loader2 className="size-4 animate-spin" /> : <><Send className="size-4" /> {t("run.submit")}</>}
+                  </Button>
+                </div>
               </form>
             </div>
           </div>

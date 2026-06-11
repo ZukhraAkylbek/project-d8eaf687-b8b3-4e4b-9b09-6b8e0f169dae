@@ -26,6 +26,44 @@ export type ScenarioCategory =
 export type ScenarioRole = "Product Manager" | "Project Manager" | "Stakeholder Roleplay";
 export type ScenarioLevel = "Junior" | "Mid-level" | "Senior";
 
+/* ---------------- Industry / Theme engine ---------------- */
+export type IndustryType =
+  | "telecom"
+  | "banking"
+  | "construction"
+  | "manufacturing"
+  | "retail"
+  | "it_startup";
+
+export interface IndustryTheme {
+  id: IndustryType;
+  name: string;
+  primaryColor: string;
+  accentColor: string;
+  officeBgStyle: string;
+  documentTemplates: string[];
+  avatarStyle: string;
+}
+
+export const INDUSTRY_THEMES: Record<IndustryType, IndustryTheme> = {
+  telecom: { id: "telecom", name: "Telecom", primaryColor: "#6E27C5", accentColor: "#FF6A00", officeBgStyle: "telecom-monitors", documentTemplates: ["network-report", "churn-analytics", "tariff-plan"], avatarStyle: "telecom" },
+  banking: { id: "banking", name: "Banking", primaryColor: "#0E4DA4", accentColor: "#22C55E", officeBgStyle: "banking-glass", documentTemplates: ["financial-report", "compliance-doc", "risk-register"], avatarStyle: "banking" },
+  construction: { id: "construction", name: "Construction", primaryColor: "#B45309", accentColor: "#F59E0B", officeBgStyle: "construction-blueprints", documentTemplates: ["blueprint", "site-log", "safety-checklist"], avatarStyle: "construction" },
+  manufacturing: { id: "manufacturing", name: "Manufacturing", primaryColor: "#374151", accentColor: "#EF4444", officeBgStyle: "factory-floor", documentTemplates: ["production-log", "qa-report", "supply-chain"], avatarStyle: "manufacturing" },
+  retail: { id: "retail", name: "Retail", primaryColor: "#DB2777", accentColor: "#F472B6", officeBgStyle: "retail-store", documentTemplates: ["sales-report", "inventory", "promo-brief"], avatarStyle: "retail" },
+  it_startup: { id: "it_startup", name: "IT Startup", primaryColor: "#7C3AED", accentColor: "#06B6D4", officeBgStyle: "startup-loft", documentTemplates: ["product-spec", "okrs", "metrics-dashboard"], avatarStyle: "startup" },
+};
+
+export interface FinalExamStatus {
+  id: string;
+  industry: IndustryType;
+  durationMinutes: number;
+  status: "not_started" | "in_progress" | "completed";
+  score?: number;
+  aiFeedback?: string;
+  certificateUrl?: string;
+}
+
 export interface ScenarioMetric {
   label: string;
   value: string;
@@ -65,6 +103,12 @@ export interface Scenario {
   messages: ScenarioMessage[];
   resources: string[];
   suggestedActions: string[];
+  /** Final exam (60min, time-bound, free-form only). */
+  isExam?: boolean;
+  /** Exam duration in minutes (default 60). */
+  examDurationMin?: number;
+  /** Industry theme key for visual theming. */
+  industry?: IndustryType;
 }
 
 export const SCENARIOS: Scenario[] = [
@@ -465,6 +509,47 @@ export const SCENARIOS: Scenario[] = [
     ],
     resources: ["Q3 Roadmap", "Revenue Forecast", "Customer Interviews"],
     suggestedActions: ["Open with framing", "Share data", "Ask clarifying question", "Propose adjustment"],
+  },
+  {
+    id: "exam-telecom-final",
+    title: "Final Exam — Telecom PM",
+    role: "Product Manager",
+    category: "Strategy",
+    level: "Senior",
+    durationMin: "60 min",
+    totalSteps: 6,
+    isExam: true,
+    examDurationMin: 60,
+    industry: "telecom",
+    company: {
+      name: "O! Telecom",
+      about: "National mobile operator with 4.5M subscribers facing churn pressure from new MVNO entrants.",
+      employees: "3500",
+      products: "Mobile, Fiber, B2B",
+      market: "Telecom",
+    },
+    scenario: "Defend the Q4 retention strategy in front of the executive board",
+    briefing:
+      "60-minute final exam. No suggested answers — you write everything yourself, attach external docs (Notion/Google Docs links) where needed. Timer is hard.",
+    companyGoal: "Cut churn from 3.8% to 2.5% in 90 days without margin loss.",
+    objectives: [
+      "Diagnose churn root causes",
+      "Propose a 90-day retention plan",
+      "Defend it to the board",
+    ],
+    evaluatedOn: ["Product Thinking", "Analytics", "Communication", "Prioritization", "Risk Management"],
+    metrics: [
+      { label: "Churn", value: "3.8%", delta: "+0.6 pts QoQ", trend: "down" },
+      { label: "ARPU", value: "$11.20", trend: "flat" },
+      { label: "NPS", value: "28", delta: "-4", trend: "down" },
+      { label: "MVNO Share", value: "12%", delta: "+5 pts", trend: "down" },
+    ],
+    updates: [{ time: "Day 0", text: "Board meeting scheduled in 60 minutes" }],
+    messages: [
+      { from: "CEO", role: "Executive", time: "Now", text: "I want a written plan with links to your TZ — no slides." },
+    ],
+    resources: ["Churn cohort data", "Competitor tariffs", "Support call logs"],
+    suggestedActions: [],
   },
 ];
 
