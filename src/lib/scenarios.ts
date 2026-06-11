@@ -26,6 +26,44 @@ export type ScenarioCategory =
 export type ScenarioRole = "Product Manager" | "Project Manager" | "Stakeholder Roleplay";
 export type ScenarioLevel = "Junior" | "Mid-level" | "Senior";
 
+/* ---------------- Industry / Theme engine ---------------- */
+export type IndustryType =
+  | "telecom"
+  | "banking"
+  | "construction"
+  | "manufacturing"
+  | "retail"
+  | "it_startup";
+
+export interface IndustryTheme {
+  id: IndustryType;
+  name: string;
+  primaryColor: string;
+  accentColor: string;
+  officeBgStyle: string;
+  documentTemplates: string[];
+  avatarStyle: string;
+}
+
+export const INDUSTRY_THEMES: Record<IndustryType, IndustryTheme> = {
+  telecom: { id: "telecom", name: "Telecom", primaryColor: "#6E27C5", accentColor: "#FF6A00", officeBgStyle: "telecom-monitors", documentTemplates: ["network-report", "churn-analytics", "tariff-plan"], avatarStyle: "telecom" },
+  banking: { id: "banking", name: "Banking", primaryColor: "#0E4DA4", accentColor: "#22C55E", officeBgStyle: "banking-glass", documentTemplates: ["financial-report", "compliance-doc", "risk-register"], avatarStyle: "banking" },
+  construction: { id: "construction", name: "Construction", primaryColor: "#B45309", accentColor: "#F59E0B", officeBgStyle: "construction-blueprints", documentTemplates: ["blueprint", "site-log", "safety-checklist"], avatarStyle: "construction" },
+  manufacturing: { id: "manufacturing", name: "Manufacturing", primaryColor: "#374151", accentColor: "#EF4444", officeBgStyle: "factory-floor", documentTemplates: ["production-log", "qa-report", "supply-chain"], avatarStyle: "manufacturing" },
+  retail: { id: "retail", name: "Retail", primaryColor: "#DB2777", accentColor: "#F472B6", officeBgStyle: "retail-store", documentTemplates: ["sales-report", "inventory", "promo-brief"], avatarStyle: "retail" },
+  it_startup: { id: "it_startup", name: "IT Startup", primaryColor: "#7C3AED", accentColor: "#06B6D4", officeBgStyle: "startup-loft", documentTemplates: ["product-spec", "okrs", "metrics-dashboard"], avatarStyle: "startup" },
+};
+
+export interface FinalExamStatus {
+  id: string;
+  industry: IndustryType;
+  durationMinutes: number;
+  status: "not_started" | "in_progress" | "completed";
+  score?: number;
+  aiFeedback?: string;
+  certificateUrl?: string;
+}
+
 export interface ScenarioMetric {
   label: string;
   value: string;
