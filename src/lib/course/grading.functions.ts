@@ -231,7 +231,7 @@ function fallbackCallReply(data: z.infer<typeof CallInput>): CallReply {
     "метрик",
     "ценност",
     "пользовател",
-    "отч[её]т",
+    "отч",
     "успех",
   ];
   const asksOpenQuestion = /\?|расска|объясн|почему|какие|какой|что|когда|сколько|насколько|помоги|давай|можем|можешь/i.test(text);
