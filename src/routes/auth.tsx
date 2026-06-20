@@ -48,7 +48,8 @@ function AuthPage() {
         });
         if (error) throw error;
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const loginEmail = email.includes("@") ? email : `${email.trim()}@admin.com`;
+        const { error } = await supabase.auth.signInWithPassword({ email: loginEmail, password });
         if (error) throw error;
       }
       navigate({ to: "/course" });
