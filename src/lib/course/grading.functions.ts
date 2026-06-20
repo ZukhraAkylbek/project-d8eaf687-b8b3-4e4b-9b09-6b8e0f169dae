@@ -19,6 +19,11 @@ const GradeInput = z.object({
   answer: z.string().min(1).max(8000),
 });
 
+const CallGradeInput = GradeInput.extend({
+  hiddenInfo: z.string().optional().default(""),
+  transcript: z.array(z.object({ role: z.enum(["user", "persona"]), text: z.string() })).optional().default([]),
+});
+
 const GradeSchema = z.object({
   passed: z.boolean().describe("true only if ALL criteria are met"),
   metCriteria: z.array(z.string()).describe("criteria texts that are satisfied"),
@@ -72,6 +77,54 @@ function fallbackGrade(data: z.infer<typeof GradeInput>): GradeResult {
   };
 }
 
+function meaningfulWords(value: string) {
+  const stopWords = new Set([
+    "ответ",
+    "называет",
+    "учитывает",
+    "упомянута",
+    "упомянуты",
+    "упомянут",
+    "критерий",
+    "конкретный",
+    "через",
+    "роль",
+    "если",
+    "что",
+    "как",
+    "для",
+    "или",
+    "это",
+    "the",
+    "and",
+  ]);
+  return (value.toLowerCase().match(/[a-zа-яё]{4,}/gi) ?? []).filter((w) => !stopWords.has(w));
+}
+
+function fallbackCallAnswerGrade(data: z.infer<typeof CallGradeInput>): GradeResult {
+  const answer = data.answer.toLowerCase();
+  const transcript = data.transcript.map((t) => t.text).join(" ").toLowerCase();
+  const important = meaningfulWords(`${data.prompt} ${data.criteria.join(" ")} ${data.hiddenInfo}`).slice(0, 30);
+  const hits = important.filter((w) => answer.includes(w)).length;
+  const hiddenWasDiscussed = meaningfulWords(data.hiddenInfo).some((w) => transcript.includes(w) || answer.includes(w));
+  const pmSignals = /(риск|срок|блокер|зависим|приоритет|план|следующ|уточн|готов|оценк|бюджет|объ[её]м|scope|api|макет|метрик|ценност)/i.test(
+    data.answer,
+  );
+  const passed = data.answer.trim().length >= 35 && (hiddenWasDiscussed || pmSignals || hits >= 2);
+
+  return {
+    passed,
+    metCriteria: passed ? data.criteria : data.criteria.filter((c) => meaningfulWords(c).some((w) => answer.includes(w))),
+    unmetCriteria: passed ? [] : data.criteria,
+    guidingQuestion: passed
+      ? ""
+      : "Сформулируй не дословную фразу, а управленческий вывод: что ты выяснил на звонке и какое действие PM из этого следует?",
+    feedback: passed
+      ? "Ответ засчитан по смыслу: ты связал вывод со звонком и следующим PM-действием."
+      : "Пока не видно управленческого вывода из звонка: нужен риск/ограничение/следующий шаг, а не точная угадываемая формулировка.",
+  };
+}
+
 export const gradeWritten = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => GradeInput.parse(d))
   .handler(async ({ data }) => {
@@ -98,6 +151,40 @@ ${data.criteria.map((c, i) => `${i + 1}. ${c}`).join("\n")}
     }
   });
 
+export const gradeCallAnswer = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => CallGradeInput.parse(d))
+  .handler(async ({ data }) => {
+    try {
+      const { output } = await generateText({
+        model: getModel(),
+        output: Output.object({ schema: GradeSchema }),
+        prompt: `Ты оцениваешь итоговый ответ студента после учебного Zoom-созвона по проектному менеджменту.
+
+ВАЖНО: это НЕ игра в угадывание одной фразы. Засчитывай синонимы, неполные, но управленчески верные формулировки и ответы, где студент понял смысл разговора. Не требуй дословного совпадения со скрытой информацией.
+
+ОТКРЫТЫЙ ВОПРОС: ${data.prompt}
+
+ЧЕК-ЛИСТ:
+${data.criteria.map((c, i) => `${i + 1}. ${c}`).join("\n")}
+
+КОНТЕКСТ, который мог быть выяснен в разговоре:
+${data.hiddenInfo || "нет отдельной скрытой детали"}
+
+СТЕНОГРАММА ЗВОНКА:
+${data.transcript.map((t) => `${t.role === "user" ? "PM" : "Собеседник"}: ${t.text}`).join("\n") || "(стенограммы нет)"}
+
+ОТВЕТ СТУДЕНТА:
+"""${data.answer}"""
+
+passed=true, если ответ по смыслу закрывает управленческий вывод: что выяснили, почему это важно и какой следующий шаг PM. Если не хватает детали — задай ОДИН наводящий вопрос. Весь текст — на русском.`,
+      });
+      return output;
+    } catch (error) {
+      console.error("gradeCallAnswer fallback", error);
+      return fallbackCallAnswerGrade(data);
+    }
+  });
+
 /* ---------------- AI call character reply ---------------- */
 
 const CallInput = z.object({
@@ -109,6 +196,7 @@ const CallInput = z.object({
   brief: z.string(),
   history: z.array(z.object({ role: z.enum(["user", "persona"]), text: z.string() })).max(40),
   userMessage: z.string().min(1).max(4000),
+  revealedAlready: z.boolean().optional().default(false),
 });
 
 const ReplySchema = z.object({
