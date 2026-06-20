@@ -70,6 +70,22 @@ export interface AdminAnalytics {
   taskTypeBreakdown: TaskTypeStat[];
 }
 
+export interface StudentStat {
+  userId: string;
+  name: string;
+  lessonsStarted: number;
+  lessonsCompleted: number;
+  completionPct: number;
+  attempts: number;
+  avgAttempts: number;
+  solvedSelf: number;
+  solvedWithHelp: number;
+  failed: number;
+  appeals: number;
+  lastActive: string | null;
+  status: "active" | "stuck" | "idle" | "done";
+}
+
 type AttemptRow = {
   user_id: string;
   lesson_id: string;
