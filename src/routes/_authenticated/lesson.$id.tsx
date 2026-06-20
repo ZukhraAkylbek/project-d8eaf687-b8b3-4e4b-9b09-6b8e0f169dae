@@ -6,6 +6,7 @@ import { gradeWritten, type GradeResult } from "@/lib/course/grading.functions";
 import { upsertProgress, recordAttempt } from "@/lib/course/progress.functions";
 import { CallPanel } from "@/components/course/CallPanel";
 import { LessonRadar, type LessonSkillKey } from "@/components/course/LessonRadar";
+import { AppealButton } from "@/components/course/AppealButton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -133,6 +134,7 @@ function LessonRunner() {
         {task && (
           <TaskStep
             key={taskIndex}
+            lessonId={lesson.id}
             task={task}
             onComplete={completeTask}
           />
@@ -173,20 +175,20 @@ function TheoryStep({ lesson, onNext }: { lesson: ReturnType<typeof getLesson> &
 }
 
 /* ---------------- Task dispatcher ---------------- */
-function TaskStep({ task, onComplete }: { task: Task; onComplete: (s: AttemptStatus, score?: number) => void }) {
+function TaskStep({ lessonId, task, onComplete }: { lessonId: string; task: Task; onComplete: (s: AttemptStatus, score?: number) => void }) {
   switch (task.type) {
     case "quiz":
-      return <QuizStep task={task} onComplete={onComplete} />;
+      return <QuizStep lessonId={lessonId} task={task} onComplete={onComplete} />;
     case "calculation":
-      return <CalcStep task={task} onComplete={onComplete} />;
+      return <CalcStep lessonId={lessonId} task={task} onComplete={onComplete} />;
     case "case_choice":
-      return <CaseStep task={task} onComplete={onComplete} />;
+      return <CaseStep lessonId={lessonId} task={task} onComplete={onComplete} />;
     case "written":
-      return <WrittenStep task={task} onComplete={onComplete} />;
+      return <WrittenStep lessonId={lessonId} task={task} onComplete={onComplete} />;
     case "call":
       return (
         <div className="rounded-2xl border bg-card shadow-card overflow-hidden h-[78vh] min-h-[620px] flex flex-col">
-          <CallPanel task={task} onComplete={(s, _a, score) => onComplete(s, score)} />
+          <CallPanel lessonId={lessonId} task={task} onComplete={(s, _a, score) => onComplete(s, score)} />
         </div>
       );
   }
@@ -204,7 +206,7 @@ function HintBox({ level, text }: { level: number; text: string }) {
 }
 
 /* ---------------- Quiz ---------------- */
-function QuizStep({ task, onComplete }: { task: Extract<Task, { type: "quiz" }>; onComplete: (s: AttemptStatus) => void }) {
+function QuizStep({ lessonId, task, onComplete }: { lessonId: string; task: Extract<Task, { type: "quiz" }>; onComplete: (s: AttemptStatus) => void }) {
   const [qi, setQi] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
   const [attempts, setAttempts] = useState(0);
@@ -285,6 +287,17 @@ function QuizStep({ task, onComplete }: { task: Extract<Task, { type: "quiz" }>;
           Правильный ответ выделен зелёным. Запомни и двигайся дальше.
         </div>
       )}
+      {attempts >= 1 && (
+        <AppealButton
+          context={{
+            lessonId,
+            taskType: "quiz",
+            attemptNumber: attempts,
+            studentInput: selected !== null ? `Вопрос: ${q.question} · Выбран вариант ${selected !== null ? String.fromCharCode(65 + selected) : "-"}: ${selected !== null ? q.options[selected] : ""}` : "",
+            systemFeedback: reveal ? task.hint2 : task.hint1,
+          }}
+        />
+      )}
 
       <div className="mt-5">
         {reveal ? (
@@ -299,7 +312,7 @@ function QuizStep({ task, onComplete }: { task: Extract<Task, { type: "quiz" }>;
 }
 
 /* ---------------- Calculation ---------------- */
-function CalcStep({ task, onComplete }: { task: Extract<Task, { type: "calculation" }>; onComplete: (s: AttemptStatus) => void }) {
+function CalcStep({ lessonId, task, onComplete }: { lessonId: string; task: Extract<Task, { type: "calculation" }>; onComplete: (s: AttemptStatus) => void }) {
   const [value, setValue] = useState("");
   const [attempts, setAttempts] = useState(0);
   const [reveal, setReveal] = useState(false);
@@ -356,6 +369,17 @@ function CalcStep({ task, onComplete }: { task: Extract<Task, { type: "calculati
           <p className="mt-1">{task.explanation}</p>
         </div>
       )}
+      {attempts >= 1 && (
+        <AppealButton
+          context={{
+            lessonId,
+            taskType: "calculation",
+            attemptNumber: attempts,
+            studentInput: value,
+            systemFeedback: reveal ? `Решение: ${task.explanation}` : task.hint1,
+          }}
+        />
+      )}
 
       <div className="mt-5">
         {reveal ? (
@@ -369,7 +393,7 @@ function CalcStep({ task, onComplete }: { task: Extract<Task, { type: "calculati
 }
 
 /* ---------------- Case (categorization) ---------------- */
-function CaseStep({ task, onComplete }: { task: Extract<Task, { type: "case_choice" }>; onComplete: (s: AttemptStatus) => void }) {
+function CaseStep({ lessonId, task, onComplete }: { lessonId: string; task: Extract<Task, { type: "case_choice" }>; onComplete: (s: AttemptStatus) => void }) {
   const [assign, setAssign] = useState<Record<number, string>>({});
   const [attempts, setAttempts] = useState(0);
   const [reveal, setReveal] = useState(false);
@@ -429,6 +453,17 @@ function CaseStep({ task, onComplete }: { task: Extract<Task, { type: "case_choi
           <p className="mt-1">{task.explanation}</p>
         </div>
       )}
+      {attempts >= 1 && (
+        <AppealButton
+          context={{
+            lessonId,
+            taskType: "case_choice",
+            attemptNumber: attempts,
+            studentInput: task.items.map((it, i) => `«${it.text}» → ${assign[i] ?? "-"}`).join("; "),
+            systemFeedback: reveal ? `Разбор: ${task.explanation}` : task.hint1,
+          }}
+        />
+      )}
 
       <div className="mt-5">
         {reveal ? (
@@ -442,7 +477,7 @@ function CaseStep({ task, onComplete }: { task: Extract<Task, { type: "case_choi
 }
 
 /* ---------------- Written ---------------- */
-function WrittenStep({ task, onComplete }: { task: Extract<Task, { type: "written" }>; onComplete: (s: AttemptStatus) => void }) {
+function WrittenStep({ lessonId, task, onComplete }: { lessonId: string; task: Extract<Task, { type: "written" }>; onComplete: (s: AttemptStatus) => void }) {
   const grade = useServerFn(gradeWritten);
   const [answer, setAnswer] = useState("");
   const [revisions, setRevisions] = useState(0);
@@ -500,6 +535,15 @@ function WrittenStep({ task, onComplete }: { task: Extract<Task, { type: "writte
             <Lightbulb className="size-4" /> Что доработать
           </div>
           <p className="mt-1">{result.guidingQuestion || result.feedback}</p>
+          <AppealButton
+            context={{
+              lessonId,
+              taskType: "written",
+              attemptNumber: revisions,
+              studentInput: answer,
+              systemFeedback: JSON.stringify(result),
+            }}
+          />
         </div>
       )}
 

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { callReply, gradeCallAnswer, type GradeResult } from "@/lib/course/grading.functions";
 import type { CallTask } from "@/lib/course";
+import { AppealButton } from "@/components/course/AppealButton";
 import {
   Camera,
   CameraOff,
@@ -119,9 +120,11 @@ function suggestedPrompts(task: CallTask) {
 
 export function CallPanel({
   task,
+  lessonId,
   onComplete,
 }: {
   task: CallTask;
+  lessonId: string;
   onComplete: (status: "solved_self" | "solved_with_help", answer: string, score?: number) => void;
 }) {
   const reply = useServerFn(callReply);
@@ -584,6 +587,16 @@ export function CallPanel({
                 <div className="rounded-lg border border-warning/50 bg-warning/10 p-3 text-sm">
                   <div className="font-medium">Подсказка</div>
                   <p className="mt-1">{result.guidingQuestion || result.feedback}</p>
+                  <AppealButton
+                    context={{
+                      lessonId,
+                      taskType: "call",
+                      attemptNumber: Math.max(1, hintCount),
+                      studentInput: answer,
+                      systemFeedback: JSON.stringify(result),
+                      callTranscript: turns.map((t) => ({ role: t.role, text: t.text })),
+                    }}
+                  />
                 </div>
               )}
 

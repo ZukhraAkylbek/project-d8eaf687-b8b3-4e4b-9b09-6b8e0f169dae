@@ -7,7 +7,7 @@ import { LESSONS, lessonStepCount } from "@/lib/course";
 import { practiceAfterLesson } from "@/lib/course/practice";
 import { getMyProgress } from "@/lib/course/progress.functions";
 import { Button } from "@/components/ui/button";
-import { GraduationCap, CheckCircle2, Lock, PlayCircle, LogOut, Monitor, Building2, ArrowRight } from "lucide-react";
+import { GraduationCap, CheckCircle2, PlayCircle, LogOut, Building2, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/course")({
@@ -59,11 +59,6 @@ function CoursePage() {
             </div>
           </Link>
           <div className="flex items-center gap-2">
-            <Link to="/simulations">
-              <Button size="sm" variant="ghost">
-                <Monitor className="size-4" /> Офис-симулятор
-              </Button>
-            </Link>
             {authed === false ? (
               <Button size="sm" onClick={() => navigate({ to: "/auth" })}>Войти</Button>
             ) : authed ? (
@@ -101,14 +96,13 @@ function CoursePage() {
             const p = progressMap.get(lesson.id);
             const done = p?.status === "completed";
             const started = !!p && !done;
-            const prev = idx === 0 ? null : progressMap.get(LESSONS[idx - 1].id);
-            const locked = authed === true && idx > 0 && prev?.status !== "completed" && !p;
+            const locked = false;
             const totalSteps = lessonStepCount(lesson);
 
             const practice = practiceAfterLesson(lesson.number);
             const practiceProgress = practice ? progressMap.get(practice.id) : undefined;
             const practiceDone = practiceProgress?.status === "completed";
-            const practiceLocked = authed === true && !done && !practiceProgress;
+            const practiceLocked = false;
 
             return (
               <div key={lesson.id} className="contents">
@@ -134,20 +128,14 @@ function CoursePage() {
                     <span className="text-[11px] text-muted-foreground">
                       {started ? `Шаг ${(p?.current_step ?? 0) + 1}/${totalSteps}` : `${totalSteps} шагов`}
                     </span>
-                    {locked ? (
-                      <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
-                        <Lock className="size-3.5" /> Закрыт
-                      </span>
-                    ) : (
-                      <Link
-                        to="/lesson/$id"
-                        params={{ id: lesson.id }}
-                        className="text-xs font-medium text-primary inline-flex items-center gap-1 hover:underline"
-                      >
-                        <PlayCircle className="size-4" />
-                        {done ? "Повторить" : started ? "Продолжить" : "Начать"}
-                      </Link>
-                    )}
+                    <Link
+                      to="/lesson/$id"
+                      params={{ id: lesson.id }}
+                      className="text-xs font-medium text-primary inline-flex items-center gap-1 hover:underline"
+                    >
+                      <PlayCircle className="size-4" />
+                      {done ? "Повторить" : started ? "Продолжить" : "Начать"}
+                    </Link>
                   </div>
                 </div>
               </div>
@@ -176,20 +164,14 @@ function CoursePage() {
                     <div className="mt-0.5 text-xs text-muted-foreground line-clamp-1">{practice.subtitle}</div>
                     <div className="mt-2 flex items-center justify-between">
                       <span className="text-[11px] text-muted-foreground">{practice.tasks.length} рабочих задач</span>
-                      {practiceLocked ? (
-                        <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
-                          <Lock className="size-3.5" /> Пройди урок {practice.afterLesson}
-                        </span>
-                      ) : (
-                        <Link
-                          to="/practice/$id"
-                          params={{ id: practice.id }}
-                          className="text-xs font-medium text-primary inline-flex items-center gap-1 hover:underline"
-                        >
-                          <ArrowRight className="size-4" />
-                          {practiceDone ? "Пройти снова" : "Войти в офис"}
-                        </Link>
-                      )}
+                      <Link
+                        to="/practice/$id"
+                        params={{ id: practice.id }}
+                        className="text-xs font-medium text-primary inline-flex items-center gap-1 hover:underline"
+                      >
+                        <ArrowRight className="size-4" />
+                        {practiceDone ? "Пройти снова" : "Войти в офис"}
+                      </Link>
                     </div>
                   </div>
                 </div>
