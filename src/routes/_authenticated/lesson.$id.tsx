@@ -122,7 +122,7 @@ function LessonRunner() {
         </div>
       </header>
 
-      <main className="max-w-3xl mx-auto px-4 py-6">
+      <main className={cn("mx-auto px-4 py-6", task?.type === "call" ? "max-w-6xl" : "max-w-3xl")}>
         {isTheory && (
           <TheoryStep lesson={lesson} onNext={() => setStep(1)} />
         )}
@@ -181,7 +181,7 @@ function TaskStep({ task, onComplete }: { task: Task; onComplete: (s: AttemptSta
       return <WrittenStep task={task} onComplete={onComplete} />;
     case "call":
       return (
-        <div className="rounded-2xl border bg-card shadow-card overflow-hidden h-[70vh] flex flex-col">
+        <div className="rounded-2xl border bg-card shadow-card overflow-hidden h-[78vh] min-h-[620px] flex flex-col">
           <CallPanel task={task} onComplete={(s, _a) => onComplete(s)} />
         </div>
       );
