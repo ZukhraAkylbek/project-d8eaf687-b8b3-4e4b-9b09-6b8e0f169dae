@@ -477,7 +477,7 @@ function CaseStep({ lessonId, task, onComplete }: { lessonId: string; task: Extr
 }
 
 /* ---------------- Written ---------------- */
-function WrittenStep({ task, onComplete }: { task: Extract<Task, { type: "written" }>; onComplete: (s: AttemptStatus) => void }) {
+function WrittenStep({ lessonId, task, onComplete }: { lessonId: string; task: Extract<Task, { type: "written" }>; onComplete: (s: AttemptStatus) => void }) {
   const grade = useServerFn(gradeWritten);
   const [answer, setAnswer] = useState("");
   const [revisions, setRevisions] = useState(0);
