@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { callReply, gradeWritten, type GradeResult } from "@/lib/course/grading.functions";
+import { callReply, gradeCallAnswer, type GradeResult } from "@/lib/course/grading.functions";
 import type { CallTask } from "@/lib/course";
 import {
   Camera,
@@ -70,12 +70,13 @@ export function CallPanel({
   onComplete: (status: "solved_self" | "solved_with_help", answer: string) => void;
 }) {
   const reply = useServerFn(callReply);
-  const grade = useServerFn(gradeWritten);
+  const grade = useServerFn(gradeCallAnswer);
 
   const participants = useMemo(() => buildParticipants(task), [task]);
   const [connected, setConnected] = useState(false);
   const [turns, setTurns] = useState<Turn[]>([]);
   const [revealed, setRevealed] = useState(false);
+  const revealedRef = useRef(false);
   const [thinking, setThinking] = useState(false);
   const [recording, setRecording] = useState(false);
   const [muted, setMuted] = useState(false);
@@ -93,6 +94,11 @@ export function CallPanel({
   const chunksRef = useRef<Blob[]>([]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
+
+  const markRevealed = useCallback(() => {
+    revealedRef.current = true;
+    setRevealed(true);
+  }, []);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -137,10 +143,11 @@ export function CallPanel({
             brief: task.brief,
             history,
             userMessage: clean,
+            revealedAlready: revealedRef.current,
           },
         })) as { reply: string; revealed: boolean };
         setTurns((prev) => [...prev, { role: "persona", text: out.reply }]);
-        if (out.revealed) setRevealed(true);
+        if (out.revealed) markRevealed();
         void speak(out.reply);
       } catch {
         const fallback = `${task.personaName}: Я слышу тебя. Давай конкретно: спроси про сроки, блокеры, объём работ или готовность ключевой части.`;
@@ -150,7 +157,7 @@ export function CallPanel({
         setThinking(false);
       }
     },
-    [reply, task, turns, speak],
+    [reply, task, turns, speak, markRevealed],
   );
 
   async function startCall() {
@@ -169,10 +176,11 @@ export function CallPanel({
           brief: task.brief,
           history: [],
           userMessage: "Здравствуйте! Это PM. Давайте обсудим ситуацию на проектном созвоне.",
+          revealedAlready: false,
         },
       })) as { reply: string; revealed: boolean };
       setTurns([{ role: "persona", text: out.reply }]);
-      if (out.revealed) setRevealed(true);
+      if (out.revealed) markRevealed();
       void speak(out.reply);
     } catch {
       const firstLine = `${task.personaName}: Привет. ${task.brief} Я готов обсудить, но мне нужны конкретные вопросы от PM.`;
@@ -240,7 +248,13 @@ export function CallPanel({
     setError("");
     try {
       const res = (await grade({
-        data: { prompt: task.openQuestion, criteria: task.criteria, answer },
+        data: {
+          prompt: task.openQuestion,
+          criteria: task.criteria,
+          answer,
+          hiddenInfo: task.hiddenInfo,
+          transcript: turns,
+        },
       })) as GradeResult;
       setResult(res);
       if (res.passed) {
