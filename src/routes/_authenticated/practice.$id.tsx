@@ -254,7 +254,7 @@ function IntroScreen({
   return (
     <div>
       <div className="text-[11px] uppercase tracking-[0.18em] text-primary font-semibold">{practice.covers}</div>
-      <h1 className="mt-2 text-2xl font-bold text-foreground/95">{practice.title}</h1>
+      <h1 className="mt-2 text-2xl font-bold text-white">{practice.title}</h1>
       <p className="mt-1 text-white/70">{practice.subtitle}</p>
       <p className="mt-4 leading-relaxed text-white/80">{practice.intro}</p>
       <div className="mt-5 rounded-lg border border-white/10 bg-white/5 p-3 text-sm text-white/70">
