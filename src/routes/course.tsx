@@ -105,9 +105,14 @@ function CoursePage() {
             const locked = authed === true && idx > 0 && prev?.status !== "completed" && !p;
             const totalSteps = lessonStepCount(lesson);
 
+            const practice = practiceAfterLesson(lesson.number);
+            const practiceProgress = practice ? progressMap.get(practice.id) : undefined;
+            const practiceDone = practiceProgress?.status === "completed";
+            const practiceLocked = authed === true && !done && !practiceProgress;
+
             return (
+              <div key={lesson.id} className="contents">
               <div
-                key={lesson.id}
                 className={cn(
                   "rounded-xl border bg-card p-4 flex items-start gap-3 transition-shadow",
                   !locked && "hover:shadow-card",
@@ -145,6 +150,50 @@ function CoursePage() {
                     )}
                   </div>
                 </div>
+              </div>
+
+              {practice && (
+                <div
+                  className={cn(
+                    "sm:col-span-2 rounded-xl border p-4 flex items-start gap-3 transition-shadow",
+                    "bg-gradient-to-br from-primary/10 to-card border-primary/30",
+                    practiceLocked ? "opacity-60" : "hover:shadow-card",
+                  )}
+                >
+                  <div
+                    className={cn(
+                      "size-10 shrink-0 rounded-lg grid place-items-center",
+                      practiceDone ? "bg-emerald-500 text-white" : "bg-gradient-primary text-white shadow-glow",
+                    )}
+                  >
+                    {practiceDone ? <CheckCircle2 className="size-5" /> : <Building2 className="size-5" />}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[10px] uppercase tracking-[0.16em] text-primary font-semibold">
+                      Практика в офисе · {practice.covers}
+                    </div>
+                    <div className="font-semibold text-sm leading-snug">{practice.title}</div>
+                    <div className="mt-0.5 text-xs text-muted-foreground line-clamp-1">{practice.subtitle}</div>
+                    <div className="mt-2 flex items-center justify-between">
+                      <span className="text-[11px] text-muted-foreground">{practice.tasks.length} рабочих задач</span>
+                      {practiceLocked ? (
+                        <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
+                          <Lock className="size-3.5" /> Пройди урок {practice.afterLesson}
+                        </span>
+                      ) : (
+                        <Link
+                          to="/practice/$id"
+                          params={{ id: practice.id }}
+                          className="text-xs font-medium text-primary inline-flex items-center gap-1 hover:underline"
+                        >
+                          <ArrowRight className="size-4" />
+                          {practiceDone ? "Пройти снова" : "Войти в офис"}
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
               </div>
             );
           })}
