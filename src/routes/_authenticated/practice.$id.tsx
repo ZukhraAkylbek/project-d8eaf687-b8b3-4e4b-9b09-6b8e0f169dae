@@ -145,7 +145,8 @@ function PracticeRunner() {
 /* ---------- Laptop frame ---------- */
 function Laptop({ children }: { children: React.ReactNode }) {
   return (
-    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="w-full lg:flex-1 max-w-3xl animate-in fade-in slide-in-from-bottom-4 duration-500">
+
       {/* screen */}
       <div className="rounded-t-2xl border border-white/15 bg-[oklch(0.17_0.02_255)] shadow-2xl overflow-hidden ring-1 ring-black/40">
         {/* webcam notch + browser chrome */}
