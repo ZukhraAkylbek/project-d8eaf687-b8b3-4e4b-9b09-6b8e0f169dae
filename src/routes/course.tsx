@@ -57,13 +57,20 @@ function CoursePage() {
               <div className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Курс практики</div>
             </div>
           </Link>
-          {authed === false ? (
-            <Button size="sm" onClick={() => navigate({ to: "/auth" })}>Войти</Button>
-          ) : authed ? (
-            <Button size="sm" variant="outline" onClick={signOut}>
-              <LogOut className="size-4" /> Выйти
-            </Button>
-          ) : null}
+          <div className="flex items-center gap-2">
+            <Link to="/simulations">
+              <Button size="sm" variant="ghost">
+                <Monitor className="size-4" /> Офис-симулятор
+              </Button>
+            </Link>
+            {authed === false ? (
+              <Button size="sm" onClick={() => navigate({ to: "/auth" })}>Войти</Button>
+            ) : authed ? (
+              <Button size="sm" variant="outline" onClick={signOut}>
+                <LogOut className="size-4" /> Выйти
+              </Button>
+            ) : null}
+          </div>
         </div>
       </header>
 
