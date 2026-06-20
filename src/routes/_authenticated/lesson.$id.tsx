@@ -5,6 +5,7 @@ import { getLesson, STEP_LABELS_RU, type Task } from "@/lib/course";
 import { gradeWritten, type GradeResult } from "@/lib/course/grading.functions";
 import { upsertProgress, recordAttempt } from "@/lib/course/progress.functions";
 import { CallPanel } from "@/components/course/CallPanel";
+import { LessonRadar, type LessonSkillKey } from "@/components/course/LessonRadar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -35,6 +36,7 @@ function LessonRunner() {
 
   const [step, setStep] = useState(0);
   const [outcomes, setOutcomes] = useState<Record<number, AttemptStatus>>({});
+  const [scores, setScores] = useState<Record<number, number>>({});
 
   const totalSteps = lesson ? lesson.tasks.length + 2 : 0;
 
@@ -61,8 +63,10 @@ function LessonRunner() {
   const taskIndex = step - 1;
   const task = !isTheory && !isSummary ? lesson.tasks[taskIndex] : undefined;
 
-  function completeTask(status: AttemptStatus) {
+  function completeTask(status: AttemptStatus, score?: number) {
+    const fallbackScore = status === "solved_self" ? 100 : status === "solved_with_help" ? 65 : 30;
     setOutcomes((o) => ({ ...o, [taskIndex]: status }));
+    setScores((s) => ({ ...s, [taskIndex]: score ?? fallbackScore }));
     if (task) {
       void logAttempt({
         data: {
@@ -134,7 +138,7 @@ function LessonRunner() {
           />
         )}
         {isSummary && (
-          <SummaryStep lesson={lesson} outcomes={outcomes} onBackToTheory={() => setStep(0)} onFinish={() => navigate({ to: "/course" })} />
+          <SummaryStep lesson={lesson} outcomes={outcomes} scores={scores} onBackToTheory={() => setStep(0)} onFinish={() => navigate({ to: "/course" })} />
         )}
       </main>
     </div>
@@ -169,7 +173,7 @@ function TheoryStep({ lesson, onNext }: { lesson: ReturnType<typeof getLesson> &
 }
 
 /* ---------------- Task dispatcher ---------------- */
-function TaskStep({ task, onComplete }: { task: Task; onComplete: (s: AttemptStatus) => void }) {
+function TaskStep({ task, onComplete }: { task: Task; onComplete: (s: AttemptStatus, score?: number) => void }) {
   switch (task.type) {
     case "quiz":
       return <QuizStep task={task} onComplete={onComplete} />;
@@ -182,7 +186,7 @@ function TaskStep({ task, onComplete }: { task: Task; onComplete: (s: AttemptSta
     case "call":
       return (
         <div className="rounded-2xl border bg-card shadow-card overflow-hidden h-[78vh] min-h-[620px] flex flex-col">
-          <CallPanel task={task} onComplete={(s, _a) => onComplete(s)} />
+          <CallPanel task={task} onComplete={(s, _a, score) => onComplete(s, score)} />
         </div>
       );
   }
@@ -517,50 +521,112 @@ function WrittenStep({ task, onComplete }: { task: Extract<Task, { type: "writte
 }
 
 /* ---------------- Summary ---------------- */
+const TASK_SKILL: Record<Task["type"], LessonSkillKey> = {
+  quiz: "productThinking",
+  calculation: "analytics",
+  case_choice: "prioritization",
+  written: "execution",
+  call: "communication",
+};
+
+function verdictFor(score: number) {
+  if (score >= 85) return { label: "Отличный результат", color: "text-emerald-600" };
+  if (score >= 70) return { label: "Хорошая база", color: "text-emerald-600" };
+  if (score >= 50) return { label: "Есть над чем поработать", color: "text-amber-500" };
+  return { label: "Стоит повторить тему", color: "text-destructive" };
+}
+
 function SummaryStep({
   lesson,
   outcomes,
+  scores,
   onBackToTheory,
   onFinish,
 }: {
   lesson: NonNullable<ReturnType<typeof getLesson>>;
   outcomes: Record<number, AttemptStatus>;
+  scores: Record<number, number>;
   onBackToTheory: () => void;
   onFinish: () => void;
 }) {
-  const stats = useMemo(() => {
+  const { stats, skills, hasCall, callScore } = useMemo(() => {
     const vals = Object.values(outcomes);
     const self = vals.filter((v) => v === "solved_self").length;
     const help = vals.filter((v) => v === "solved_with_help").length;
     const total = lesson.tasks.length;
-    const score = Math.round(((self * 100 + help * 60) / Math.max(1, total)) || 0);
-    return { self, help, total, score };
-  }, [outcomes, lesson]);
+    const allScores = lesson.tasks.map((_, i) => scores[i] ?? 0);
+    const overall = Math.round(allScores.reduce((a, b) => a + b, 0) / Math.max(1, total));
+
+    // accumulate per-skill from task types present in this lesson
+    const buckets: Record<LessonSkillKey, number[]> = {
+      productThinking: [],
+      analytics: [],
+      communication: [],
+      prioritization: [],
+      execution: [],
+      riskManagement: [],
+    };
+    lesson.tasks.forEach((t, i) => {
+      buckets[TASK_SKILL[t.type]].push(scores[i] ?? 0);
+      // every task also contributes to risk-management awareness
+      buckets.riskManagement.push((scores[i] ?? 0) * 0.9);
+    });
+    const skills = (Object.keys(buckets) as LessonSkillKey[]).reduce((acc, k) => {
+      const arr = buckets[k];
+      acc[k] = arr.length ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) : overall;
+      return acc;
+    }, {} as Record<LessonSkillKey, number>);
+
+    const callIdx = lesson.tasks.findIndex((t) => t.type === "call");
+    return {
+      stats: { self, help, total, score: overall },
+      skills,
+      hasCall: callIdx >= 0,
+      callScore: callIdx >= 0 ? scores[callIdx] ?? 0 : 0,
+    };
+  }, [outcomes, scores, lesson]);
+
+  const verdict = verdictFor(stats.score);
 
   return (
-    <div className="rounded-2xl border bg-card p-6 shadow-card text-center">
-      <div className="size-14 mx-auto rounded-full bg-gradient-primary grid place-items-center shadow-glow">
-        <CheckCircle2 className="size-7 text-white" />
+    <div className="rounded-2xl border bg-card p-6 shadow-card animate-in fade-in">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h2 className="text-xl font-bold flex items-center gap-2">Урок пройден <span>🎉</span></h2>
+          <p className="text-muted-foreground text-sm mt-0.5">{lesson.title}</p>
+        </div>
       </div>
-      <h2 className="mt-4 text-xl font-bold">Урок пройден!</h2>
-      <p className="text-muted-foreground mt-1">{lesson.title}</p>
 
-      <div className="mt-5 grid grid-cols-3 gap-3">
-        <div className="rounded-xl bg-secondary/60 p-3">
+      <div className="mt-6 grid lg:grid-cols-[240px_1fr] gap-6 items-center">
+        <div className="rounded-xl border bg-secondary/30 p-6 text-center">
+          <div className="text-[11px] text-muted-foreground uppercase tracking-wider">Итоговый балл</div>
+          <div className="mt-1 text-6xl font-bold tracking-tight">
+            {stats.score}
+            <span className="text-2xl text-muted-foreground font-medium">/100</span>
+          </div>
+          <div className={cn("mt-2 text-sm font-semibold", verdict.color)}>{verdict.label}</div>
+        </div>
+        <LessonRadar skills={skills} />
+      </div>
+
+      <div className="mt-5 grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <div className="rounded-xl bg-secondary/60 p-3 text-center">
           <div className="text-2xl font-bold text-emerald-600">{stats.self}</div>
           <div className="text-[11px] text-muted-foreground uppercase tracking-wide">самостоятельно</div>
         </div>
-        <div className="rounded-xl bg-secondary/60 p-3">
+        <div className="rounded-xl bg-secondary/60 p-3 text-center">
           <div className="text-2xl font-bold text-amber-500">{stats.help}</div>
           <div className="text-[11px] text-muted-foreground uppercase tracking-wide">с подсказками</div>
         </div>
-        <div className="rounded-xl bg-secondary/60 p-3">
-          <div className="text-2xl font-bold text-primary">{stats.score}</div>
-          <div className="text-[11px] text-muted-foreground uppercase tracking-wide">баллов</div>
-        </div>
+        {hasCall && (
+          <div className="rounded-xl bg-secondary/60 p-3 text-center">
+            <div className="text-2xl font-bold text-primary">{callScore}</div>
+            <div className="text-[11px] text-muted-foreground uppercase tracking-wide">оценка звонка</div>
+          </div>
+        )}
       </div>
 
-      <div className="mt-6 flex flex-col gap-2">
+      <div className="mt-6 grid sm:grid-cols-2 gap-2">
         <Button onClick={onFinish}>К списку уроков</Button>
         <Button variant="outline" onClick={onBackToTheory}>
           <BookOpen className="size-4" /> Повторить теорию
@@ -569,3 +635,4 @@ function SummaryStep({
     </div>
   );
 }
+

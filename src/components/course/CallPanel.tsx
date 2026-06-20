@@ -61,6 +61,47 @@ function buildParticipants(task: CallTask): Participant[] {
     ...extra.slice(0, 2),
   ];
 }
+const OBSERVER_LINES: { match: string; lines: string[] }[] = [
+  {
+    match: "developer",
+    lines: [
+      "С технической стороны добавлю: тут есть зависимость, которую важно проговорить.",
+      "Могу прикинуть оценку, но мне нужен зафиксированный объём.",
+      "Если решим менять scope — это снова ляжет на бэкенд.",
+    ],
+  },
+  {
+    match: "designer",
+    lines: [
+      "По макетам: финальную версию отдам, как только закрепим требования.",
+      "Я бы заранее согласовала состояние для пустых экранов.",
+      "Дизайн готов на 80%, остаток зависит от ваших вводных.",
+    ],
+  },
+  {
+    match: "stakeholder",
+    lines: [
+      "Для меня главное — чтобы это било в бизнес-метрику.",
+      "Жду от вас понятный план и сроки, а не общие слова.",
+      "Если есть риск для релиза — хочу услышать его сейчас.",
+    ],
+  },
+  {
+    match: "lead",
+    lines: [
+      "По доске видно, что часть задач уже в риске.",
+      "Команда готова, но нужен приоритет — что берём первым.",
+      "Давайте зафиксируем, кто за что отвечает после звонка.",
+    ],
+  },
+];
+
+function observerLine(role: string): string {
+  const r = role.toLowerCase();
+  const bucket = OBSERVER_LINES.find((b) => r.includes(b.match)) ?? OBSERVER_LINES[3];
+  return bucket.lines[Math.floor(Math.random() * bucket.lines.length)];
+}
+
 
 function suggestedPrompts(task: CallTask) {
   const text = `${task.brief} ${task.personaRole} ${task.hiddenInfo} ${task.revealCondition}`.toLowerCase();
@@ -81,7 +122,7 @@ export function CallPanel({
   onComplete,
 }: {
   task: CallTask;
-  onComplete: (status: "solved_self" | "solved_with_help", answer: string) => void;
+  onComplete: (status: "solved_self" | "solved_with_help", answer: string, score?: number) => void;
 }) {
   const reply = useServerFn(callReply);
   const grade = useServerFn(gradeCallAnswer);
@@ -104,6 +145,16 @@ export function CallPanel({
   const [result, setResult] = useState<GradeResult | null>(null);
   const [grading, setGrading] = useState(false);
   const [error, setError] = useState("");
+  const [observerSpeech, setObserverSpeech] = useState<Record<string, string>>({});
+
+  const observers = useMemo(() => participants.filter((p) => p.kind === "observer"), [participants]);
+
+  const nudgeObservers = useCallback(() => {
+    if (observers.length === 0) return;
+    const target = observers[Math.floor(Math.random() * observers.length)];
+    const line = observerLine(target.role);
+    setObserverSpeech((prev) => ({ ...prev, [target.name]: line }));
+  }, [observers]);
 
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -164,6 +215,7 @@ export function CallPanel({
         setTurns((prev) => [...prev, { role: "persona", text: out.reply }]);
         if (out.revealed) markRevealed();
         void speak(out.reply);
+        if (Math.random() < 0.55) setTimeout(nudgeObservers, 900);
       } catch {
         const fallback = `${task.personaName}: Я слышу тебя. Давай конкретно: спроси про сроки, блокеры, объём работ или готовность ключевой части.`;
         setTurns((prev) => [...prev, { role: "persona", text: fallback }]);
@@ -172,7 +224,7 @@ export function CallPanel({
         setThinking(false);
       }
     },
-    [reply, task, turns, speak, markRevealed],
+    [reply, task, turns, speak, markRevealed, nudgeObservers],
   );
 
   async function startCall() {
@@ -197,6 +249,9 @@ export function CallPanel({
       setTurns([{ role: "persona", text: out.reply }]);
       if (out.revealed) markRevealed();
       void speak(out.reply);
+      setObserverSpeech(
+        observers.reduce((acc, o) => ({ ...acc, [o.name]: observerLine(o.role) }), {}),
+      );
     } catch {
       const firstLine = `${task.personaName}: Привет. ${task.brief} Я готов обсудить, но мне нужны конкретные вопросы от PM.`;
       setTurns([{ role: "persona", text: firstLine }]);
@@ -272,14 +327,19 @@ export function CallPanel({
         },
       })) as GradeResult;
       setResult(res);
+      // call score: criteria coverage, bonus for revealing the hidden detail, penalty per hint
+      const total = task.criteria.length || 1;
+      const coverage = Math.min(res.metCriteria.length, total) / total;
+      let score = Math.round(coverage * 80 + (revealedRef.current ? 20 : 0) - hintCount * 8);
+      score = Math.max(20, Math.min(100, score));
       if (res.passed) {
-        onComplete(hintCount > 0 ? "solved_with_help" : "solved_self", answer);
+        onComplete(hintCount > 0 ? "solved_with_help" : "solved_self", answer, score);
       } else {
         setHintCount((c) => c + 1);
       }
     } catch {
       setError("Проверка временно недоступна. Ответ сохранён как выполненный с подсказкой.");
-      onComplete("solved_with_help", answer);
+      onComplete("solved_with_help", answer, 60);
     } finally {
       setGrading(false);
     }
@@ -351,6 +411,8 @@ export function CallPanel({
                 {participants.map((participant, i) => {
                   const isPersona = participant.kind === "persona";
                   const isUser = participant.kind === "user";
+                  const speech = observerSpeech[participant.name];
+                  const speaking = participant.kind === "observer" && !!speech;
                   return (
                     <div
                       key={participant.name}
@@ -358,6 +420,7 @@ export function CallPanel({
                         "relative min-h-[150px] overflow-hidden rounded-xl border p-3 shadow-card",
                         VIDEO_BACKGROUNDS[i % VIDEO_BACKGROUNDS.length],
                         isPersona && thinking && "ring-2 ring-primary",
+                        speaking && "ring-2 ring-success",
                       )}
                     >
                       <div className="absolute left-3 top-3 rounded-md bg-card/85 px-2 py-1 text-xs font-medium shadow-card">
@@ -372,6 +435,11 @@ export function CallPanel({
                                 <Loader2 className="size-3 animate-spin" />
                               </span>
                             )}
+                            {speaking && (
+                              <span className="absolute -right-1 -top-1 grid size-5 place-items-center rounded-full bg-success text-white">
+                                <Volume2 className="size-3" />
+                              </span>
+                            )}
                           </div>
                         ) : (
                           <div className="grid size-20 place-items-center rounded-2xl bg-card/80">
@@ -379,13 +447,19 @@ export function CallPanel({
                           </div>
                         )}
                       </div>
-                      <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between gap-2">
-                        <span className="truncate rounded-md bg-card/85 px-2 py-1 text-xs text-muted-foreground">
-                          {participant.mood}
-                        </span>
-                        {isUser && muted && <MicOff className="size-4 text-destructive" />}
-                        {isPersona && <Volume2 className="size-4 text-primary" />}
-                      </div>
+                      {speech ? (
+                        <div className="absolute bottom-3 left-3 right-3 rounded-md bg-card/90 px-2 py-1.5 text-[11px] leading-snug shadow-card line-clamp-2">
+                          {speech}
+                        </div>
+                      ) : (
+                        <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between gap-2">
+                          <span className="truncate rounded-md bg-card/85 px-2 py-1 text-xs text-muted-foreground">
+                            {participant.mood}
+                          </span>
+                          {isUser && muted && <MicOff className="size-4 text-destructive" />}
+                          {isPersona && <Volume2 className="size-4 text-primary" />}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
