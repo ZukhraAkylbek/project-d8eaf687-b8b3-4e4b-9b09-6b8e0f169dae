@@ -16,6 +16,12 @@ export interface KpiOverview {
   solvedSelfPct: number;
   solvedWithHelpPct: number;
   failedPct: number;
+  totalAttempts: number;
+  avgAttemptsPerUser: number;
+  totalAppeals: number;
+  openAppeals: number;
+  lessonsInTrouble: number; // red lessons
+  avgCompletionPct: number; // avg per-user share of 26 lessons completed
 }
 
 export interface ActivityPoint {
