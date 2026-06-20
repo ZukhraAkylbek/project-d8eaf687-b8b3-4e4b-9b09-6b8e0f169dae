@@ -205,6 +205,27 @@ export const getAdminAnalytics = createServerFn({ method: "GET" })
     );
     const retention = startedSet.size ? Math.round((completedLastSet.size / startedSet.size) * 100) : 0;
 
+    const totalAttempts = attempts.length;
+    const attemptUsers = new Set(attempts.map((a) => a.user_id));
+    const avgAttemptsPerUser = attemptUsers.size
+      ? Math.round((totalAttempts / attemptUsers.size) * 10) / 10
+      : 0;
+    const openAppeals = appeals.filter((a) => a.status === "pending").length;
+
+    // avg per-user completion share of all lessons
+    const completedByUser = new Map<string, number>();
+    for (const p of progress) {
+      if (p.status === "completed") {
+        completedByUser.set(p.user_id, (completedByUser.get(p.user_id) ?? 0) + 1);
+      }
+    }
+    const compShares = [...allUsers].map(
+      (u) => (completedByUser.get(u) ?? 0) / (LESSONS.length || 1),
+    );
+    const avgCompletionPct = compShares.length
+      ? Math.round((compShares.reduce((a, b) => a + b, 0) / compShares.length) * 100)
+      : 0;
+
     const overview: KpiOverview = {
       totalUsers: allUsers.size,
       dau: activeIn(DAY),
@@ -217,6 +238,12 @@ export const getAdminAnalytics = createServerFn({ method: "GET" })
       solvedSelfPct: Math.round((self / graded) * 100),
       solvedWithHelpPct: Math.round((help / graded) * 100),
       failedPct: Math.round((failed / graded) * 100),
+      totalAttempts,
+      avgAttemptsPerUser,
+      totalAppeals: appeals.length,
+      openAppeals,
+      lessonsInTrouble: 0, // filled after lessons computed
+      avgCompletionPct,
     };
 
     // activity last 30 days
