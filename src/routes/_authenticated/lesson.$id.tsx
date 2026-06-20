@@ -453,6 +453,17 @@ function CaseStep({ lessonId, task, onComplete }: { lessonId: string; task: Extr
           <p className="mt-1">{task.explanation}</p>
         </div>
       )}
+      {attempts >= 1 && (
+        <AppealButton
+          context={{
+            lessonId,
+            taskType: "case_choice",
+            attemptNumber: attempts,
+            studentInput: task.items.map((it, i) => `«${it.text}» → ${assign[i] ?? "-"}`).join("; "),
+            systemFeedback: reveal ? `Разбор: ${task.explanation}` : task.hint1,
+          }}
+        />
+      )}
 
       <div className="mt-5">
         {reveal ? (
