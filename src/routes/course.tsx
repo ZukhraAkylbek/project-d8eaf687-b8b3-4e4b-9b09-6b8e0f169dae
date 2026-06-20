@@ -7,7 +7,7 @@ import { LESSONS, lessonStepCount } from "@/lib/course";
 import { practiceAfterLesson } from "@/lib/course/practice";
 import { getMyProgress } from "@/lib/course/progress.functions";
 import { Button } from "@/components/ui/button";
-import { GraduationCap, CheckCircle2, PlayCircle, LogOut, Building2, ArrowRight } from "lucide-react";
+import { GraduationCap, CheckCircle2, PlayCircle, LogOut, Building2, ArrowRight, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/course")({
@@ -62,9 +62,16 @@ function CoursePage() {
             {authed === false ? (
               <Button size="sm" onClick={() => navigate({ to: "/auth" })}>Войти</Button>
             ) : authed ? (
-              <Button size="sm" variant="outline" onClick={signOut}>
-                <LogOut className="size-4" /> Выйти
-              </Button>
+              <>
+                <Button asChild size="sm" variant="ghost">
+                  <Link to="/admin">
+                    <ShieldCheck className="size-4" /> Админ
+                  </Link>
+                </Button>
+                <Button size="sm" variant="outline" onClick={signOut}>
+                  <LogOut className="size-4" /> Выйти
+                </Button>
+              </>
             ) : null}
           </div>
         </div>
