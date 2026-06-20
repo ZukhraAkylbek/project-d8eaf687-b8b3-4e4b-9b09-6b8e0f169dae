@@ -7,7 +7,7 @@ import { LESSONS, lessonStepCount } from "@/lib/course";
 import { practiceAfterLesson } from "@/lib/course/practice";
 import { getMyProgress } from "@/lib/course/progress.functions";
 import { Button } from "@/components/ui/button";
-import { GraduationCap, CheckCircle2, PlayCircle, LogOut, Building2, ArrowRight } from "lucide-react";
+import { GraduationCap, CheckCircle2, PlayCircle, LogOut, Building2, ArrowRight, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/course")({
