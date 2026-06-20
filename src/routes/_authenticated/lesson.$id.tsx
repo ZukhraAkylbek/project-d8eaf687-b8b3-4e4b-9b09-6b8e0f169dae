@@ -186,7 +186,7 @@ function TaskStep({ task, onComplete }: { task: Task; onComplete: (s: AttemptSta
     case "call":
       return (
         <div className="rounded-2xl border bg-card shadow-card overflow-hidden h-[78vh] min-h-[620px] flex flex-col">
-          <CallPanel task={task} onComplete={(s, _a) => onComplete(s)} />
+          <CallPanel task={task} onComplete={(s, _a, score) => onComplete(s, score)} />
         </div>
       );
   }
