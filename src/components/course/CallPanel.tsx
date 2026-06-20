@@ -224,7 +224,7 @@ export function CallPanel({
         setThinking(false);
       }
     },
-    [reply, task, turns, speak, markRevealed],
+    [reply, task, turns, speak, markRevealed, nudgeObservers],
   );
 
   async function startCall() {
