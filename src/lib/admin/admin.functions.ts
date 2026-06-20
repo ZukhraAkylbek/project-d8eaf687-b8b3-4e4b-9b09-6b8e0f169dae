@@ -302,7 +302,15 @@ export const getAdminAnalytics = createServerFn({ method: "GET" })
       };
     });
 
-    return { overview, activity, funnel: buildFunnel(progress), lessons };
+    overview.lessonsInTrouble = lessons.filter((l) => l.difficulty === "red").length;
+
+    // aggregate task-type breakdown across all lessons
+    const TYPES = ["quiz", "calculation", "case_choice", "written", "call"];
+    const taskTypeBreakdown: TaskTypeStat[] = TYPES.map((t) =>
+      statForTaskType(attempts.filter((a) => a.task_type === t), t),
+    ).filter((s) => s.attempts > 0);
+
+    return { overview, activity, funnel: buildFunnel(progress), lessons, taskTypeBreakdown };
   });
 
 function statForTaskType(rows: AttemptRow[], type: string): TaskTypeStat {
