@@ -164,20 +164,14 @@ function CoursePage() {
                     <div className="mt-0.5 text-xs text-muted-foreground line-clamp-1">{practice.subtitle}</div>
                     <div className="mt-2 flex items-center justify-between">
                       <span className="text-[11px] text-muted-foreground">{practice.tasks.length} рабочих задач</span>
-                      {practiceLocked ? (
-                        <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
-                          <Lock className="size-3.5" /> Пройди урок {practice.afterLesson}
-                        </span>
-                      ) : (
-                        <Link
-                          to="/practice/$id"
-                          params={{ id: practice.id }}
-                          className="text-xs font-medium text-primary inline-flex items-center gap-1 hover:underline"
-                        >
-                          <ArrowRight className="size-4" />
-                          {practiceDone ? "Пройти снова" : "Войти в офис"}
-                        </Link>
-                      )}
+                      <Link
+                        to="/practice/$id"
+                        params={{ id: practice.id }}
+                        className="text-xs font-medium text-primary inline-flex items-center gap-1 hover:underline"
+                      >
+                        <ArrowRight className="size-4" />
+                        {practiceDone ? "Пройти снова" : "Войти в офис"}
+                      </Link>
                     </div>
                   </div>
                 </div>
