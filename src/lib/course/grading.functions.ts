@@ -3,7 +3,7 @@ import { generateText, Output } from "ai";
 import { z } from "zod";
 import { createLovableAiGatewayProvider } from "../ai-gateway.server";
 
-const MODEL = "google/gemini-2.5-flash";
+const MODEL = "google/gemini-3-flash-preview";
 
 function getModel() {
   const key = process.env.LOVABLE_API_KEY;
@@ -175,7 +175,7 @@ export const callReply = createServerFn({ method: "POST" })
       const { output } = await generateText({
         model: getModel(),
         output: Output.object({ schema: ReplySchema }),
-        prompt: `Ты играешь персонажа в телефонном звонке-симуляции для обучения проектных менеджеров. Оставайся в роли, говори естественно и реалистично, как живой человек. Отвечай на русском языке.
+        prompt: `Ты играешь персонажа в Zoom-like созвоне-симуляции для обучения проектных менеджеров. Оставайся в роли, говори естественно и реалистично, как живой человек. Отвечай на русском языке.
 
 ПЕРСОНАЖ: ${data.personaName}, ${data.personaRole}
 ХАРАКТЕР: ${data.character}
@@ -183,7 +183,7 @@ export const callReply = createServerFn({ method: "POST" })
 СКРЫТАЯ ИНФОРМАЦИЯ (НЕ раскрывай по умолчанию): ${data.hiddenInfo}
 УСЛОВИЕ РАСКРЫТИЯ: ${data.revealCondition}
 
-ВАЖНО: раскрывай скрытую информацию ТОЛЬКО если PM явно задал вопрос, подпадающий под условие раскрытия. Иначе отвечай в характере, не выдавая её.
+ВАЖНО: раскрывай скрытую информацию ТОЛЬКО если PM явно задал вопрос, подпадающий под условие раскрытия. Иначе отвечай в характере, не выдавая её. Никогда не отвечай «плохо слышно», если сообщение пользователя текстовое и понятно.
 
 ИСТОРИЯ ЗВОНКА:
 ${convo || "(звонок только начался)"}
